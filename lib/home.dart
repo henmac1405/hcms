@@ -37,6 +37,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 // import 'package:dropdown_search/dropdown_search.dart';
+//tes git
 class MenuItem {
   final String company_name;
   final String database_name;
@@ -1496,7 +1497,7 @@ class _HomePageState extends State<HomePage> {
     String header = base64Encode(utf8.encode(jsonEncode({
       'typ': 'API',
       'alg': 'SHA256',
-    }))); 
+    })));
     String payload = base64Encode(utf8.encode(secretKey));
 
     String ts = base64Encode(utf8.encode(timestamp));
