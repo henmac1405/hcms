@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timer_builder/timer_builder.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:hcms/login.dart';
+import 'package:hcms/home.dart';
 // import 'package:path/path.dart';
 import 'package:hcms/database/function_helper.dart';
 import 'package:hcms/database/db_helper.dart';
@@ -55,13 +56,6 @@ class AbsencePage extends StatefulWidget {
   final List imageslidePaths;
   final String url_api_slide;
   final String strdebug;
-  // final CameraDescription camera;
-  // final String company_id;
-  // final String company_name;
-  // final String listcompany_id;
-  // final String listcompany_remark;
-  // final String employee_idno;
-  // final String employee_name;
 
   @override
   State<AbsencePage> createState() => _AbsencePageState();
@@ -374,6 +368,8 @@ class _AbsencePageState extends State<AbsencePage> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryColor = Color.fromARGB(255, 2, 115, 243);
+    const Color cardBgColor = Color(0xFFE8F0FE);
     return Scaffold(
       backgroundColor: Colors.white,
       body: RefreshIndicator(
@@ -562,34 +558,257 @@ class _AbsencePageState extends State<AbsencePage> {
                       ]))))
         ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        onPressed: () {
-          Navigator.pop(context);
-          // _uploaddio();
-          // _captureAndSave();
-          // _uploaddioNew();
-          // getabsenterakhir();
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: Colors.red,
+      //   foregroundColor: Colors.white,
+      //   onPressed: () {
+      //     Navigator.pop(context);
+      //   },
+      //   tooltip: 'OUT',
+      //   child: const Icon(Icons.arrow_back),
+      // ), // This trailing comma makes auto-formatting nicer for build methods.
 
-          // getabsen();
-          // getabsenhistory();
-          // getabsenyesterday();
-          // getdata();
-          // FullscreenImageViewer.open(
-          //   context: context,
-          //   child: child,
-          // );
-          // print('_showFullScreenImageDialog');
-          // _showFullScreenImageDialog(context, "");
-          // getabsen();
-          // getabsenhistory();
-          // uploadImage(_image!, imageuploadUrl);
-          // uploadImageToServer();
-        },
-        tooltip: 'OUT',
-        child: const Icon(Icons.arrow_back),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      //Bottom Navigation Bar
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          // Memberikan bayangan halus di atas navbar agar efek melengkungnya lebih terlihat menonjol
+          boxShadow: [
+            BoxShadow(color: Colors.black12, spreadRadius: 0, blurRadius: 10),
+          ],
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: ClipRRect(
+          // PENTING: Harus ditambahkan borderRadius di sini agar konten di dalamnya ikut terpotong melengkung
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          child: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: primaryColor,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white70,
+            currentIndex: 0,
+            iconSize:
+                22, // Sedikit diperkecil dari default (24) agar muat 5 menu dengan rapi
+            selectedLabelStyle: const TextStyle(
+              fontSize:
+                  11, // Disesuaikan ke 11 agar teks tidak memotong satu sama lain
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.2,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 0.2,
+            ),
+            onTap: (int index) {
+              print("Navigasi ke index: $index");
+
+              //0. HOME
+              if (index == 0) {
+                _navigateToHome(context);
+              }
+              // 1. JIKA MENU ATTENDANCE (INDEX 2) DIKLIK
+              if (index == 2) {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors
+                      .transparent, // Agar sudut melengkung Container terlihat
+                  builder: (BuildContext context) {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize:
+                            MainAxisSize.min, // Tinggi mengikuti jumlah konten
+                        children: [
+                          // Garis indikator kecil di atas modal
+                          Container(
+                            margin: const EdgeInsets.only(top: 12, bottom: 8),
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'Attendence',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const Divider(),
+
+                          // Pilihan 1: Absen
+                          ListTile(
+                            leading:
+                                const Icon(Icons.timer, color: primaryColor),
+                            title: const Text('Absen'),
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+
+                          // Pilihan 2: Cuti
+                          ListTile(
+                            leading: const Icon(Icons.event_available,
+                                color: primaryColor),
+                            title: const Text('Cuti'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Membuka formulir Cuti");
+                            },
+                          ),
+
+                          // Pilihan 3: Izin
+                          ListTile(
+                            leading: const Icon(Icons.assignment_turned_in,
+                                color: primaryColor),
+                            title: const Text('Izin'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Membuka formulir Izin");
+                            },
+                          ),
+
+                          // Pilihan 4: PH (Public Holiday / Kerja di Hari Libur)
+                          ListTile(
+                            leading: const Icon(Icons.calendar_month,
+                                color: primaryColor),
+                            title: const Text('PH'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Membuka formulir PH");
+                            },
+                          ),
+                          const SizedBox(height: 20), // Jarak aman bawah
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+              // 2. JIKA MENU PROFILE (INDEX 4) DIKLIK
+              else if (index == 4) {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (BuildContext context) {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 12, bottom: 8),
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'Akun Saya',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const Divider(),
+                          ListTile(
+                            leading: const Icon(Icons.account_box,
+                                color: primaryColor),
+                            title: const Text('My Account'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Membuka My Account");
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.lock_reset,
+                                color: primaryColor),
+                            title: const Text('Change Password'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Membuka Change Password");
+                            },
+                          ),
+                          ListTile(
+                            leading:
+                                const Icon(Icons.logout, color: Colors.red),
+                            title: const Text('Logout',
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold)),
+                            onTap: () {
+                              Navigator.pop(context);
+                              print("Proses Logout");
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const LoginPage(
+                                          title: "ABSENCE",
+                                        )),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }
+              // 3. LOGIKA UNTUK MENU LAIN (HOME, APPROVAL, SPD)
+              else {
+                // Jalankan setState atau pindah halaman biasa di sini
+              }
+            },
+
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assignment_turned_in),
+                label: 'Approval',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.timer),
+                label: 'Attendance', // Sedikit koreksi typo dari 'Attendence'
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assignment_ind),
+                label: 'SPD',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -895,137 +1114,6 @@ class _AbsencePageState extends State<AbsencePage> {
     );
   }
 
-  // Widget _showcamera() {
-  //   return Column(
-  //     children: <Widget>[
-  //       const SizedBox(
-  //         height: 5,
-  //       ),
-  //       // if (strcamera == "On") ...[
-  //       FutureBuilder<void>(
-  //         future: _initializeControllerFuture,
-  //         builder: (context, snapshot) {
-  //           if (snapshot.connectionState == ConnectionState.done) {
-  //             // If the Future is complete, display the preview.
-  //             return RepaintBoundary(
-  //               key: _repaintBoundaryKey,
-  //               child: Stack(
-  //                 children: <Widget>[
-  //                   CameraPreview(_controller), // Camera feed as the base layer
-  //                   Positioned(
-  //                     // bottom: 20.0,
-  //                     top: 0,
-  //                     child: Container(
-  //                       child: Row(
-  //                           mainAxisAlignment: MainAxisAlignment.start,
-  //                           children: <Widget>[
-  //                             Container(
-  //                               width: MediaQuery.of(context).size.width,
-  //                               padding: EdgeInsets.all(8.0),
-  //                               child: Text(
-  //                                 strremark,
-  //                                 style: TextStyle(
-  //                                     color: Colors.white,
-  //                                     fontSize: 12.0,
-  //                                     fontWeight: FontWeight.w700),
-  //                                 textAlign: TextAlign.left,
-  //                               ),
-  //                             ),
-  //                           ]), // Optional: for better text visibility
-  //                       // padding:
-  //                       //     EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-  //                     ),
-  //                   ),
-  //                   Positioned(
-  //                     bottom: 0.0,
-  //                     child: Container(
-  //                       child: Row(
-  //                           mainAxisAlignment: MainAxisAlignment.start,
-  //                           children: <Widget>[
-  //                             Container(
-  //                               width: MediaQuery.of(context).size.width,
-  //                               padding: EdgeInsets.all(0.0),
-  //                               child: Text(
-  //                                 "Transentertainment     Transentertainment     Transentertainment     Transentertainment",
-  //                                 style: TextStyle(
-  //                                     color: Colors.white,
-  //                                     fontSize: 8.0,
-  //                                     fontWeight: FontWeight.w700),
-  //                                 textAlign: TextAlign.center,
-  //                               ),
-  //                             ),
-  //                           ]), // Optional: for better text visibility
-  //                       // padding:
-  //                       //     EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //             );
-  //           } else {
-  //             // Otherwise, display a loading indicator.
-  //             return const Center(child: CircularProgressIndicator());
-  //           }
-  //         },
-  //       ),
-  //       // ],
-  //       const SizedBox(
-  //         height: 5,
-  //       ),
-  //       Row(
-  //         mainAxisAlignment: MainAxisAlignment.start,
-  //         children: <Widget>[
-  //           Switch(
-  //             value: _isSwitched,
-  //             onChanged: (newValue) {
-  //               DateTime now = DateTime.now();
-  //               String tglRemark = tglFormat.format(now);
-  //               setState(() {
-  //                 _isSwitched = newValue;
-  //                 if (_isSwitched == true) {
-  //                   // _isSwitched = false;
-  //                   strcamera = "On";
-  //                   // url_api = url_api_dev;
-  //                   // urlschemaroot();
-  //                   updateremark();
-  //                 } else {
-  //                   // _isSwitched = false;
-  //                   strcamera = "Off";
-  //                   // url_api = url_api_prod;
-  //                   // urlschemaroot();
-  //                 }
-  //               });
-  //               // You can add logic here based on the new switch state
-  //               print('Switch state changed to: $newValue');
-  //             },
-  //           ),
-  //           Text("Camera " + strcamera),
-  //           // Spacer(),
-  //           // if (strcamera == "On") ...[
-  //           //   IconButton(
-  //           //     icon: Icon(Icons.flip_camera_ios), // The icon to display
-  //           //     iconSize: 30.0, // Optional: customize icon size
-  //           //     color: Color.fromARGB(
-  //           //         255, 2, 8, 134), // Optional: customize icon color
-  //           //     onPressed: () {
-  //           //       // This function will be executed when the IconButton is pressed
-  //           //       print('Favorite icon pressed!');
-  //           //       // You can add any logic here, like navigating to another screen,
-  //           //       // updating state, showing a dialog, etc.
-  //           //     },
-  //           //   ),
-  //           // ]
-  //           // IconButton(
-  //           //     onPressed: () {
-  //           //       _navigateToCekKoneksi(context);
-  //           //     },
-  //           //     icon: Icon(Icons.settings)),
-  //         ],
-  //       ),
-  //     ],
-  //   );
-  // }
-
   Widget _buttoncamera() {
     return Column(
       children: <Widget>[
@@ -1059,58 +1147,6 @@ class _AbsencePageState extends State<AbsencePage> {
             ],
           ),
         ),
-        // Padding(
-        //   padding: EdgeInsets.only(left: 5, right: 5, top: 0.0, bottom: 0.0),
-        //   child: Row(
-        //     mainAxisAlignment: MainAxisAlignment.start,
-        //     children: <Widget>[
-        //       ElevatedButton.icon(
-        //         icon: const Icon(Icons.save),
-        //         label: const Text('Save'),
-        //         style: ElevatedButton.styleFrom(
-        //           backgroundColor: Color.fromARGB(255, 2, 8, 134),
-        //           onPrimary: Colors.white,
-        //           shape: RoundedRectangleBorder(
-        //             borderRadius: BorderRadius.circular(
-        //                 10), // Sets a circular border radius of 20
-        //           ),
-        //         ),
-        //         onPressed: () {
-        //           // _openGallery();
-        //           // _takePicture();
-        //           _captureAndSave();
-        //         },
-        //       ),
-        //       SizedBox(width: 8),
-        //     ],
-        //   ),
-        // ),
-        // Padding(
-        //   padding: EdgeInsets.only(left: 5, right: 5, top: 0.0, bottom: 0.0),
-        //   child: Row(
-        //     mainAxisAlignment: MainAxisAlignment.start,
-        //     children: <Widget>[
-        //       ElevatedButton.icon(
-        //         icon: const Icon(Icons.save),
-        //         label: const Text('Upload'),
-        //         style: ElevatedButton.styleFrom(
-        //           backgroundColor: Color.fromARGB(255, 2, 8, 134),
-        //           onPrimary: Colors.white,
-        //           shape: RoundedRectangleBorder(
-        //             borderRadius: BorderRadius.circular(
-        //                 10), // Sets a circular border radius of 20
-        //           ),
-        //         ),
-        //         onPressed: () {
-        //           // _openGallery();
-        //           // _takePicture();
-        //           _uploaddioNew();
-        //         },
-        //       ),
-        //       SizedBox(width: 8),
-        //     ],
-        //   ),
-        // ),
       ],
     );
   }
@@ -3184,6 +3220,23 @@ class _AbsencePageState extends State<AbsencePage> {
         _filename; // Replace with your actual image path
     File imageFile = File(imagePath);
     print(imageFile);
+  }
+
+  void _navigateToHome(BuildContext context) async {
+    // final cameras = await availableCameras();
+    // final firstCamera = cameras[1];
+    Route route = MaterialPageRoute<void>(
+        builder: (context) => HomePage(
+              url_api: widget.url_api,
+              token: widget.token,
+              type: widget.type,
+              apikey: widget.apikey,
+              imageslidePaths: imageslidePaths,
+              url_api_slide: url_api_slide,
+              strdebug: strdebug,
+              // camera: firstCamera,
+            ));
+    Navigator.push<void>(context, route);
   }
 }
 

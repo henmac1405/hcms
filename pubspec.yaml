@@ -39,7 +39,7 @@ dependencies:
   intl: ^0.19.0
   timer_builder: ^2.0.0
   image_picker: ^1.0.8
-  fluttertoast: ^8.2.5
+  fluttertoast: ^8.2.0
   shared_preferences: ^2.2.3
   sqflite: ^2.3.2
   dio: ^5.9.0
@@ -59,6 +59,13 @@ dependencies:
   # camera: ^0.11.0+1
   flutter_image_compress: ^2.3.0
   permission_handler: ^11.3.1
+  passwordfield: ^0.2.0
+  camera: ^0.11.0+1
+  google_mlkit_face_detection: ^0.13.1
+  image: any
+  pdf: any
+  printing: any
+  open_filex: ^4.7.0
   # syncfusion_flutter_datepicker: ^27.2.5
   # syncfusion_flutter_datepicker: ^28.1.33
   # calendar_date_picker2: ^2.0.1
@@ -83,10 +90,25 @@ flutter:
   assets:
     - assets/phantom_logo_kuning.png
     - assets/TE.png
+    - assets/logote.png
     - assets/icon_absen.png
     - assets/citygarden.png
     - assets/Logo-TSG-S.png
     - assets/maps.jpeg
+    - assets/absen_new.png
+    - assets/ph_new.png
+    - assets/spd_new.png
+    - assets/slipgaji_new.png
+    - assets/sakit_new.png
+    - assets/izin_new.png
+    - assets/cuti_new.png
+    - assets/male.png
+    - assets/female.png
+    - assets/idcard_te.png
+    - assets/idcard_kc.png
+    - assets/idcard_ts.png
+    - assets/idcard_tsw.png
+    - assets/idcard_tsm.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -212,62 +212,9 @@ class _DownloadPageState extends State<DownloadPage> {
                 const SizedBox(
                   height: 20,
                 ),
-                // TextFormField(
-                //   decoration: const InputDecoration(
-                //       icon: Icon(Icons.adjust),
-                //       // hintText: 'Enter your firs and latname',
-                //       labelText: 'DOWNLOAD FILE NAME'),
-                //   controller: _filenameController,
-                //   keyboardType: TextInputType.multiline,
-                //   minLines: 1, //Normal textInputField will be displayed
-                //   maxLines: 3,
-                //   readOnly: false,
-                // ),
                 const SizedBox(
                   height: 10,
                 ),
-                // isLoading
-                //     ? const Center(
-                //         child: CircularProgressIndicator(),
-                //       )
-                //     : Text(""),
-                // const SizedBox(
-                //   height: 10,
-                // ),
-                // Container(
-                //     padding: EdgeInsets.only(left: 5, top: 10),
-                //     child: ElevatedButton(
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: Colors.red,
-                //         onPrimary: Colors.white,
-                //       ),
-                //       onPressed: () async {
-                //         setState(() {
-                //           // isLoading = true;
-                //           _fileurl = _fileurlController.text;
-                //           _status = "";
-                //           _progress = 0;
-
-                //           // statusurlapi1 = "";
-                //         });
-                //         _fileurl =
-                //             "https://sso.transentertainment.com/files.php?f=absence-te-apps.zip";
-                //         _filename = "hcmsnew.zip";
-                //         if (_fileurl == "") {
-                //           _showDialogWarning("File URL Kosong");
-                //           _status = "--Path Not Found--";
-                //         } else {
-                //           deleteFile(File(directory + _filename));
-                //           // _onDownloadFilePressed();
-                //           download2(dio, _fileurl, directory + _filename);
-                //         }
-                //         // cekkoneksi(_url_api + "cek_koneksi", "1");
-                //       },
-                //       child: new Text("DOWNLOAD"),
-                //     )),
-                // const SizedBox(
-                //   height: 10,
-                // ),
                 Container(
                     padding: EdgeInsets.only(left: 5, top: 10),
                     child: ElevatedButton(
@@ -299,26 +246,6 @@ class _DownloadPageState extends State<DownloadPage> {
                       },
                       child: new Text("DOWNLOAD"),
                     )),
-                // const SizedBox(
-                //   height: 10,
-                // ),
-                // Container(
-                //     padding: EdgeInsets.only(left: 5, top: 20),
-                //     child: ElevatedButton(
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: Colors.green,
-                //         onPrimary: Colors.white,
-                //       ),
-                //       onPressed: () {
-                //         print(zipfilename);
-                //         if (zipfilename == "") {
-                //           _showDialogWarning("Zip File Is Null");
-                //         } else {
-                //           openFile();
-                //         }
-                //       },
-                //       child: new Text("UPDATE"),
-                //     )),
                 const SizedBox(
                   height: 20,
                 ),

@@ -7,9 +7,12 @@ import 'package:hcms/absence/camera.dart';
 import 'package:hcms/absence/camera_page.dart';
 import 'package:hcms/dinas/dinas.dart';
 import 'package:hcms/config.dart';
-import 'package:hcms/tester.dart';
+import 'package:hcms/login.dart';
+import 'package:hcms/temp.dart';
+import 'package:hcms/facedetector.dart';
 import 'package:hcms/download.dart';
 import 'package:hcms/error.dart';
+import 'package:hcms/radius.dart';
 import 'package:intl/intl.dart';
 import 'package:timer_builder/timer_builder.dart';
 import 'package:hcms/database/function_helper.dart';
@@ -59,9 +62,24 @@ final List<String> imagePaths = [
 ];
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title});
+  const HomePage({
+    super.key,
+    required this.url_api,
+    required this.token,
+    required this.type,
+    required this.apikey,
+    required this.imageslidePaths,
+    required this.url_api_slide,
+    required this.strdebug,
+  });
 
-  final String title;
+  final String url_api;
+  final String token;
+  final String type;
+  final String apikey;
+  final List imageslidePaths;
+  final String url_api_slide;
+  final String strdebug;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -100,9 +118,7 @@ class _HomePageState extends State<HomePage> {
   String dayName = "";
   String dayNameInd = "";
   int dayOfMonth = 0;
-  String url_api = "https://api-hcm.transentertainment.com/index.php/api/v1/";
-  // String url_api = "http://192.168.0.5/api-ci3/index.php/api/v1/";
-  // String url_api = "http://172.16.3.56/api-ci3-dev/index.php/api/v1/";
+  String url_api = "";
 
   String token = "";
   List companyItemlist = [];
@@ -136,6 +152,9 @@ class _HomePageState extends State<HomePage> {
   String strdebug = "Off";
   String url_api_prod =
       "https://api-hcm.transentertainment.com/index.php/api/v1/";
+
+  // String url_api_dev = "http://172.16.4.96/api-ci3-dev/index.php/api/v1/";
+
   String url_api_dev =
       "https://api-hcmdev.transentertainment.com/index.php/api/v1/";
 
@@ -164,18 +183,25 @@ class _HomePageState extends State<HomePage> {
 
   final ImagePicker _picker = ImagePicker();
 
+  TextEditingController _strController = TextEditingController();
+
+  static const Color primaryBlue = Color(0xFF0A3D91); // Biru Gelap
+  static const Color accentBlue = Color(0xFF00A6EB); // Biru Muda
+  static const Color transRed = Color(0xFFE52320); // Merah
+  static const Color transYellow = Color(0xFFFABE00); // Kuning
+  static const Color textDark = Color(0xFF333333); // Hitam
+
+  Color cekincolor = Colors.green;
+  Color cekoutcolor = Colors.orange;
+
   @override
   void initState() {
     super.initState();
-    projectVersion = "1.0.1";
-    // isLoading = true;
-    // getconfig().then((hasils) {
-    //   // print('getdata');
-    // });
+    getFromSharedPreferences();
+    url_api_slide = widget.url_api_slide;
+    imageslidePaths = widget.imageslidePaths;
+    strdebug = widget.strdebug;
     requestPermission();
-    urlschemaroot();
-    listcompany();
-    listNIK();
     strTimeZone = DateTime.now().timeZoneName;
     daynow = dayFormat.format(now);
 
@@ -268,6 +294,10 @@ class _HomePageState extends State<HomePage> {
     final TextEditingController niksController = TextEditingController();
     MenuNIK? selectedNiks;
 
+    // Warna utama ungu sesuai tema aplikasi pada gambar
+    const Color primaryBlue = Color.fromARGB(255, 2, 115, 243);
+    const Color cardBgColor = Color(0xFFE8F0FE);
+
     return PopScope(
       canPop: false,
       onPopInvoked: (bool didPop) async {
@@ -275,16 +305,16 @@ class _HomePageState extends State<HomePage> {
         print('didPop');
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(
+            0xFFF5F5F5), // Mengubah background agar kontras dengan card menu putih
         body: RefreshIndicator(
           onRefresh: () async {
             _refresh();
-            // Replace this delay with the code to be executed during refresh
-            // and return a Future when code finishes execution.
             return Future<void>.delayed(const Duration(seconds: 2));
           },
           child: ListView(
             children: <Widget>[
+              // 1. Banner Carousel
               CarouselSlider.builder(
                 itemCount: imageslidePaths.length,
                 itemBuilder: (BuildContext context, int index, int realIndex) {
@@ -294,13 +324,13 @@ class _HomePageState extends State<HomePage> {
                         url_api_slide + imageslidePaths[index]['value'],
                         width: MediaQuery.of(context).size.width,
                         fit: BoxFit.cover,
-                        // height: 200,
-                        // fit: BoxFit.fitWidth,
-                        // width: double.infinity,
                       ),
                       Positioned(
                         bottom: 5.0,
                         child: Container(
+                          color: Colors.black54,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 16.0),
                           child: Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: <Widget>[
@@ -309,12 +339,10 @@ class _HomePageState extends State<HomePage> {
                                         CrossAxisAlignment.start,
                                     children: <Widget>[
                                       TimerBuilder.periodic(
-                                          Duration(seconds: 1),
+                                          const Duration(seconds: 1),
                                           builder: (context) {
                                         return Text(
-                                          "${getSystemTime()}" +
-                                              " " +
-                                              strTimeZone,
+                                          "${getSystemTime()} $strTimeZone",
                                           textAlign: TextAlign.left,
                                           style: const TextStyle(
                                               color: Colors.white,
@@ -323,8 +351,8 @@ class _HomePageState extends State<HomePage> {
                                         );
                                       }),
                                       Text(
-                                        dayNameInd + ", " + _tanggal,
-                                        style: TextStyle(
+                                        "$dayNameInd, $_tanggal",
+                                        style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 14.0,
                                             fontWeight: FontWeight.w700),
@@ -332,697 +360,549 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ]),
                               ]),
-                          color: Colors
-                              .black54, // Optional: for better text visibility
-                          padding: EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 16.0),
                         ),
                       ),
                     ],
                   );
                 },
                 options: CarouselOptions(
-                  viewportFraction: 1.0, // Ensures full width for each item
-                  // height: MediaQuery.of(context)
-                  //     .size
-                  //     .height, // Optional: full height
+                  viewportFraction: 1.0,
                   autoPlay: true,
                   enlargeCenterPage: false,
                   padEnds: false,
                   initialPage: 0,
                 ),
               ),
-              RepaintBoundary(
-                key: _globalKey,
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.all(10.0),
-                    padding: const EdgeInsets.all(10.0),
-                    // color: Colors.white,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        width: 8,
-                        color: Colors.white,
+
+              isLoading
+                  ? const Center(
+                      child: LinearProgressIndicator(),
+                    )
+                  : Container(),
+
+              Text(
+                "Selamat Datang, Suhendra",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+              // Tombol Absen
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: <Widget>[
+                    // TOMBOL IN
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: cekincolor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          _navigateToFaceDetector(context, "Masuk");
+                        },
+                        child: const Text('IN'),
                       ),
-                      borderRadius: BorderRadius.circular(10),
                     ),
-                    // height: 100.0,
+                    const SizedBox(
+                      height: 30,
+                      width: 50,
+                    ),
+                    // TOMBOL OUT
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: cekoutcolor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          _navigateToFaceDetector(context, "Keluar");
+                        },
+                        child: const Text('OUT'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 3. Tambahan Baru: Kontainer Menu
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: .0, vertical: 0),
+                child: Card(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 24.0, horizontal: 16.0),
                     child: Column(
-                      children: <Widget>[
-                        // InkWell(
-                        //     child: SizedBox(
-                        //       height: 130.0,
-                        //       child: Image.asset(
-                        //         "assets/TE.png",
-                        //         fit: BoxFit.contain,
-                        //       ),
-                        //     ),
-                        //     onTap: () {
-                        //       print('logo');
-                        //       _navigateToCekKoneksi(context);
-                        //     }),
-                        // const SizedBox(
-                        //   height: 20,
-                        // ),
-                        isLoading
-                            ? const Center(
-                                child: LinearProgressIndicator(),
-                              )
-                            : Container(),
-                        // Container(
-                        //   height: 80,
-                        //   decoration: BoxDecoration(
-                        //     color: Color.fromARGB(255, 76, 85, 250),
-                        //     border: Border.all(
-                        //       width: 8,
-                        //       color: Color.fromARGB(255, 76, 85, 250),
-                        //     ),
-                        //     borderRadius: BorderRadius.circular(10),
-                        //   ),
-                        //   child: Row(
-                        //     mainAxisAlignment: MainAxisAlignment.center,
-                        //     children: <Widget>[
-                        //       Column(
-                        //         // This Column is a child of the Row
-                        //         mainAxisAlignment: MainAxisAlignment.center,
-                        //         children: <Widget>[
-                        //           TimerBuilder.periodic(Duration(seconds: 1),
-                        //               builder: (context) {
-                        //             return Text(
-                        //               "${getSystemTime()}",
-                        //               textAlign: TextAlign.center,
-                        //               style: const TextStyle(
-                        //                   color: Colors.white,
-                        //                   fontSize: 20,
-                        //                   fontWeight: FontWeight.w700),
-                        //             );
-                        //           }),
-                        //           const Text(
-                        //             "WIB",
-                        //             textAlign: TextAlign.center,
-                        //             style: TextStyle(
-                        //               color: Colors.white,
-                        //               fontSize: 12.0,
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ),
-                        //       SizedBox(
-                        //         width: 30,
-                        //       ),
-                        //       Column(
-                        //         // This Column is a child of the Row
-                        //         mainAxisAlignment: MainAxisAlignment.center,
-                        //         children: <Widget>[
-                        //           Text(
-                        //             _tanggal,
-                        //             textAlign: TextAlign.center,
-                        //             style: const TextStyle(
-                        //                 color: Colors.white,
-                        //                 fontSize: 20.0,
-                        //                 fontWeight: FontWeight.w700),
-                        //           ),
-                        //           Text(
-                        //             dayNameInd,
-                        //             textAlign: TextAlign.center,
-                        //             style: const TextStyle(
-                        //               color: Colors.white,
-                        //               fontSize: 12.0,
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
-                        // const SizedBox(
-                        //   height: 20,
-                        // ),
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: <Widget>[
-                            Icon(Icons.apartment),
-                            SizedBox(width: 8),
-                            Text('Company'),
-                            Text(
-                              '*',
-                              style: TextStyle(
-                                color: Colors.red,
-                              ),
-                            ),
+                      children: [
+                        // Grid Menu 2x2
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics:
+                              const NeverScrollableScrollPhysics(), // Agar tidak bentrok scroll dengan ListView utama
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.1,
+                          children: [
+                            _buildMenuCard(
+                                'ABSENCE', "assets/absen_new.png", cardBgColor,
+                                () {
+                              _type = "ABSEN";
+                              _navigateToAbsence(context);
+                            }),
+                            _buildMenuCard(
+                                'CUTI', "assets/cuti_new.png", cardBgColor, () {
+                              _type = "CUTI";
+                              _navigateToAbsence(context);
+                            }),
+                            _buildMenuCard(
+                                'SAKIT', "assets/sakit_new.png", cardBgColor,
+                                () {
+                              _type = "SAKIT";
+                              _navigateToAbsence(context);
+                            }),
+                            _buildMenuCard(
+                                'IZIN', "assets/izin_new.png", cardBgColor, () {
+                              _type = "IZIN";
+                              _navigateToAbsence(context);
+                            }),
+                            _buildMenuCard('SLIP GAJI',
+                                "assets/slipgaji_new.png", cardBgColor, () {
+                              // Aksi ketika menu ASSET HISTORY diklik
+                            }),
+                            _buildMenuCard(
+                                'SPD', "assets/spd_new.png", cardBgColor, () {
+                              // Aksi ketika menu ASSET HISTORY diklik
+                            }),
                           ],
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        DropdownMenu<MenuItem>(
-                          //initialSelection: menuItems.first,
-
-                          controller: menuController,
-                          width: MediaQuery.of(context).size.width - 55,
-                          menuHeight: 400,
-                          hintText: "Search Company",
-                          requestFocusOnTap: true,
-                          // enableFilter: true,
-                          menuStyle: MenuStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(
-                                Colors.lightBlue.shade50),
-                          ),
-
-                          label: const Text('Search Company'),
-                          onSelected: (MenuItem? menu) {
-                            setState(() {
-                              selectedMenu = menu;
-                              print(selectedMenu!.database_name.toString());
-                              database_name = selectedMenu!.database_name;
-                              company_name = selectedMenu!.company_name;
-                            });
-                          },
-                          dropdownMenuEntries: menuItems
-                              .map<DropdownMenuEntry<MenuItem>>(
-                                  (MenuItem menu) {
-                            return DropdownMenuEntry<MenuItem>(
-                              value: menu,
-                              label: menu.company_name,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: <Widget>[
-                            Icon(Icons.contact_emergency),
-                            SizedBox(width: 8),
-                            Text('NIK'),
-                            Text(
-                              '*',
-                              style: TextStyle(
-                                color: Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-
-                        DropdownMenu<MenuNIK>(
-                          //initialSelection: menuItems.first,
-
-                          controller: _NIKController,
-                          width: MediaQuery.of(context).size.width - 55,
-                          menuHeight: 400,
-                          hintText: "Masukkan NIK Anda",
-                          requestFocusOnTap: true,
-                          enableFilter: true,
-                          menuStyle: MenuStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(
-                                Colors.lightBlue.shade50),
-                          ),
-
-                          label: const Text('Masukkan NIK Anda'),
-                          onSelected: (MenuNIK? menu) {
-                            setState(() {
-                              selectedNiks = menu;
-                              print(selectedNiks!.personalid.toString());
-                              // database_name = selectedNiks!.database_name;
-                              // company_name = selectedNiks!.personalid;
-                            });
-                          },
-                          dropdownMenuEntries: menuNIKS
-                              .map<DropdownMenuEntry<MenuNIK>>((MenuNIK menu) {
-                            return DropdownMenuEntry<MenuNIK>(
-                              value: menu,
-                              label: menu.personalid,
-                            );
-                          }).toList(),
-                        ),
-
-                        // TextFormField(
-                        //   decoration: const InputDecoration(
-                        //       border: OutlineInputBorder(
-                        //           // borderRadius:
-                        //           //     BorderRadius.all(Radius.circular(20.0)),
-                        //           ),
-
-                        //       // hintText: 'Enter your firs and latname',
-                        //       labelText: 'Masukkan NIK Anda'),
-                        //   controller: _NIKController,
-                        //   // keyboardType: TextInputType.,
-
-                        //   minLines: 1, //Normal textInputField will be displayed
-                        //   maxLines: 3,
-                        //   readOnly: false,
-                        // ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        if (strdebug == "On") ...[
-                          Text(
-                            "Debug ON : ",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 16.0,
-                            ),
-                          ),
-                          // const SizedBox(height: 16),
-                        ],
-                        if (strdebug == "On") ...[
-                          Text(
-                            url_api,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 14.0,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Container(
-                          width: MediaQuery.of(context).copyWith().size.width,
-                          height: 50.0,
-                          // width: 150,
-                          child: Row(children: <Widget>[
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Color.fromARGB(255, 76, 85, 250),
-                                  onPrimary: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        10), // Sets a circular border radius of 20
-                                  ),
-                                ),
-                                onPressed: () {
-                                  NIK = _NIKController.text.trim();
-                                  if (NIK == "123123123") {
-                                    _navigateToCekKoneksi(context);
-                                  } else if (NIK == "cek api") {
-                                    _navigateToCekKoneksi(context);
-                                  } else if (NIK == "error page") {
-                                    _navigateToError(context);
-                                  } else if (NIK == "download") {
-                                    _navigateToDownload(context);
-                                  } else if (NIK == "download apk") {
-                                    _navigateToDownload(context);
-                                  } else if (NIK == "update apk") {
-                                    _navigateToDownload(context);
-                                  } else if (NIK == "apk") {
-                                    _navigateToDownload(context);
-                                  } else if (NIK == "download dialog") {
-                                    _showDialogDownload();
-                                  } else if (NIK == "debug on") {
-                                    setState(() {
-                                      _isSwitched = true;
-                                      strdebug = "On";
-                                      url_api = url_api_dev;
-                                      urlschemaroot();
-                                      _NIKController.text = "";
-                                    });
-                                  } else if (NIK == "debug off") {
-                                    setState(() {
-                                      _isSwitched = false;
-                                      strdebug = "Off";
-                                      url_api = url_api_prod;
-                                      urlschemaroot();
-                                      _NIKController.text = "";
-                                    });
-                                  } else if (NIK == "clear nik") {
-                                    db.deleteNIKAll();
-                                    listcompany();
-                                    setState(() {
-                                      _NIKController.text = "";
-                                    });
-                                  } else if (NIK == "clear") {
-                                    db.deleteNIKAll();
-                                    listcompany();
-                                    setState(() {
-                                      _NIKController.text = "";
-                                    });
-                                  } else {
-                                    if (company_name == "") {
-                                      _showDialog("Company belum dipilih");
-                                    } else if (NIK == "") {
-                                      _showDialog("NIK belum diisi");
-                                    } else if (company_name == "api") {
-                                      _navigateToCekKoneksi(context);
-                                    } else {
-                                      _type = "ABSEN";
-                                      if (isLocation == false) {
-                                        _showDialog(
-                                            "Mohon Ijinkan Lokasi Perangkat Anda");
-                                      } else {
-                                        proses();
-                                      }
-                                    }
-                                  }
-                                  // Route route = MaterialPageRoute<void>(
-                                  //     builder: (context) => AbsencePage(
-                                  //           title: '',
-                                  //         ));
-                                  // Navigator.push<void>(context, route);
-                                }, // The icon to display
-                                child: const Text(
-                                    'ABSEN'), // The text label for the button
-                              ),
-                            ),
-                          ]),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Container(
-                          width: MediaQuery.of(context).copyWith().size.width,
-                          height: 50.0,
-                          // width: 150,
-                          child: Row(children: <Widget>[
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green[400],
-                                  onPrimary: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        10), // Sets a circular border radius of 20
-                                  ),
-                                ),
-                                onPressed: () {
-                                  NIK = _NIKController.text.trim();
-                                  if (NIK == "123123123") {
-                                    _navigateToCekKoneksi(context);
-                                  } else {
-                                    if (company_name == "") {
-                                      _showDialog("Company belum dipilih");
-                                    } else if (NIK == "") {
-                                      _showDialog("NIK belum diisi");
-                                    } else if (company_name == "api") {
-                                      _navigateToCekKoneksi(context);
-                                    } else {
-                                      _type = "CUTI";
-                                      proses();
-                                    }
-                                  }
-                                  // Route route = MaterialPageRoute<void>(
-                                  //     builder: (context) => AbsencePage(
-                                  //           title: '',
-                                  //         ));
-                                  // Navigator.push<void>(context, route);
-                                }, // The icon to display
-                                child: const Text(
-                                    'CUTI / PENGGANTI HARI'), // The text label for the button
-                              ),
-                            ),
-                          ]),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Container(
-                          width: MediaQuery.of(context).copyWith().size.width,
-                          height: 50.0,
-                          // width: 150,
-                          child: Row(children: <Widget>[
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  onPrimary: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        10), // Sets a circular border radius of 20
-                                  ),
-                                ),
-                                onPressed: () {
-                                  NIK = _NIKController.text.trim();
-                                  if (NIK == "123123123") {
-                                    _navigateToCekKoneksi(context);
-                                  } else {
-                                    if (company_name == "") {
-                                      _showDialog("Company belum dipilih");
-                                    } else if (NIK == "") {
-                                      _showDialog("NIK belum diisi");
-                                    } else if (company_name == "api") {
-                                      _navigateToCekKoneksi(context);
-                                    } else {
-                                      _type = "SAKIT";
-                                      proses();
-                                    }
-                                  }
-                                }, // The icon to display
-                                child: const Text(
-                                    'SAKIT / IZIN'), // The text label for the button
-                              ),
-                            ),
-                          ]),
-                        ),
-                        // const SizedBox(
-                        //   height: 20,
-                        // ),
-                        // Container(
-                        //   width: MediaQuery.of(context).copyWith().size.width,
-                        //   height: 50.0,
-                        //   // width: 150,
-                        //   child: Row(children: <Widget>[
-                        //     Expanded(
-                        //       child: ElevatedButton(
-                        //         style: ElevatedButton.styleFrom(
-                        //           backgroundColor: Colors.pink,
-                        //           onPrimary: Colors.white,
-                        //           shape: RoundedRectangleBorder(
-                        //             borderRadius: BorderRadius.circular(
-                        //                 10), // Sets a circular border radius of 20
-                        //           ),
-                        //         ),
-                        //         onPressed: () {
-                        //           NIK = _NIKController.text.trim();
-                        //           _type = "DINAS";
-                        //           //_navigateToDinas(context);
-                        //           _navigateToCamera2(context);
-                        //         }, // The icon to display
-                        //         child: const Text(
-                        //             'PERJALANAN DINAS'), // The text label for the button
-                        //       ),
-                        //     ),
-                        //   ]),
-                        // ),
-                        const SizedBox(
-                          height: 40,
-                        ),
-                        SizedBox(
-                          height:
-                              70.0, // Sets the height of the SizedBox, and thus the button
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Color.fromARGB(255, 47, 221, 248),
-                              onPrimary: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    10), // Sets a circular border radius of 20
-                              ),
-                            ),
-                            onPressed: () {
-                              // Define the action to perform when the button is pressed
-                              print('Button pressed!');
-                            },
-                            icon: const Icon(Icons.info), // The icon to display
-                            label: const Text(
-                                'Petunjuk : Pilih Company dan masukkan NIK untuk melanjutkan proses absensi'), // The text label for the button
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        // SizedBox(
-                        //   height: 10,
-                        // ),
-                        // Row(
-                        //   mainAxisAlignment: MainAxisAlignment.start,
-                        //   children: <Widget>[
-                        //     Switch(
-                        //       value: _isSwitched,
-                        //       onChanged: (newValue) {
-                        //         setState(() {
-                        //           _isSwitched = newValue;
-                        //           if (_isSwitched == true) {
-                        //             _isSwitched = false;
-                        //             // strdebug = "On";
-                        //             // url_api = url_api_dev;
-                        //             // urlschemaroot();
-                        //           } else {
-                        //             _isSwitched = false;
-                        //             strdebug = "Off";
-                        //             url_api = url_api_prod;
-                        //             urlschemaroot();
-                        //           }
-                        //         });
-                        //         // You can add logic here based on the new switch state
-                        //         print('Switch state changed to: $newValue');
-                        //       },
-                        //     ),
-                        //     Text("Debug " + strdebug),
-                        //     // IconButton(
-                        //     //     onPressed: () {
-                        //     //       _navigateToCekKoneksi(context);
-                        //     //     },
-                        //     //     icon: Icon(Icons.settings)),
-                        //   ],
-                        // ),
-
-                        SizedBox(
-                          height: 20,
-                        ),
-                        Text(
-                          "Version : " + projectVersion,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 14.0,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          "(C) 2025 HUMAN CAPITAL TRANS ENTERTAINMENT",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 12.0,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
+              // Section 2: Info Lokasi / Kantor Terdekat
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Pengumuman',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87)),
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text('Lihat Semua →',
+                          style: TextStyle(
+                              color: Colors.red, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 140,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 20),
+                  children: [
+                    _buildNewsCard(
+                      'Aturan Kerja Baru',
+                      'Wajib melakukan foto selfie saat melakukan absensi masuk.',
+                      onTap: () {
+                        // Tulis aksi navigasi atau logika Anda di sini
+                        _showFullScreenDialog(context, 'Aturan Kerja Baru',
+                            'Wajib melakukan foto selfie saat melakukan absensi masuk.');
+
+                        // Contoh Navigasi ke Halaman Detail Berita:
+                        // Navigator.push(context, MaterialPageRoute(builder: (context) => DetailBeritaPage()));
+                      },
+                    ),
+                    _buildNewsCard(
+                      'Cuti Bersama 22 Juni 2026',
+                      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat',
+                      onTap: () {
+                        // Tulis aksi navigasi atau logika Anda di sini
+                        _showFullScreenDialog(
+                            context,
+                            'Cuti Bersama 22 Juni 2026',
+                            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat');
+
+                        // Contoh Navigasi ke Halaman Detail Berita:
+                        // Navigator.push(context, MaterialPageRoute(builder: (context) => DetailBeritaPage()));
+                      },
+                    ),
+                    _buildNewsCard(
+                      'Lorem Ipsum',
+                      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat',
+                      onTap: () {
+                        // Tulis aksi navigasi atau logika Anda di sini
+                        _showFullScreenDialog(context, 'Lorem Ipsum',
+                            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat');
+
+                        // Contoh Navigasi ke Halaman Detail Berita:
+                        // Navigator.push(context, MaterialPageRoute(builder: (context) => DetailBeritaPage()));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 25),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-          onPressed: () async {
-            //gettoken();
-            // db.deleteConfigAll().then((result) {});
-            // getconfig();
-            // listcompany();
 
-            // getLocalTimezone();
-            // print(DateTime.now().timeZoneName);
-            // DateTime now = DateTime.now();
-            // String strTIMESTAMP = dailyFormat.format(now) +
-            //     "T" +
-            //     hourFormat.format(now) +
-            //     "+07:00";
-            // // print(strTIMESTAMP);
-            // String signature = generateSignature(
-            //   database_name,
-            //   strTIMESTAMP,
-            // );
-            // if (kDebugMode) {
-            //   print("Signature: $signature");
-            //   getapikey(signature, strTIMESTAMP);
-            // }
+        // 4.  Bottom Navigation Bar
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            // Memberikan bayangan halus di atas navbar agar efek melengkungnya lebih terlihat menonjol
+            boxShadow: [
+              BoxShadow(color: Colors.black12, spreadRadius: 0, blurRadius: 10),
+            ],
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: ClipRRect(
+            // PENTING: Harus ditambahkan borderRadius di sini agar konten di dalamnya ikut terpotong melengkung
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            child: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: primaryBlue,
+              selectedItemColor: Colors.white,
+              unselectedItemColor: Colors.white70,
+              currentIndex: 0,
+              iconSize:
+                  22, // Sedikit diperkecil dari default (24) agar muat 5 menu dengan rapi
+              selectedLabelStyle: const TextStyle(
+                fontSize:
+                    11, // Disesuaikan ke 11 agar teks tidak memotong satu sama lain
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.2,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 11,
+                letterSpacing: 0.2,
+              ),
+              onTap: (int index) {
+                print("Navigasi ke index: $index");
 
-            requestPermission();
+                // 1. JIKA MENU ATTENDANCE (INDEX 2) DIKLIK
+                if (index == 2) {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors
+                        .transparent, // Agar sudut melengkung Container terlihat
+                    builder: (BuildContext context) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize
+                              .min, // Tinggi mengikuti jumlah konten
+                          children: [
+                            // Garis indikator kecil di atas modal
+                            Container(
+                              margin: const EdgeInsets.only(top: 12, bottom: 8),
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                'Attendence',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const Divider(),
 
-            listcompany();
-            listNIK();
-            _getCurrentLocation();
-            // _takePicture();
+                            // Pilihan 1: Absen
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.timer, color: primaryBlue),
+                              title: const Text('Absen'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka halaman Absen");
+                                _type = "ABSEN";
+                                _navigateToAbsence(context);
+                              },
+                            ),
 
-//             DateTime now = DateTime.now();
-//             Duration timeZoneOffset = now.timeZoneOffset;
+                            // Pilihan 2: Cuti
+                            ListTile(
+                              leading: const Icon(Icons.event_available,
+                                  color: primaryBlue),
+                              title: const Text('Cuti'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka formulir Cuti");
+                                _type = "CUTI";
+                                _navigateToAbsence(context);
+                              },
+                            ),
 
-// // To get the offset in hours:
-//             int offsetInHours = timeZoneOffset.inHours;
+                            // Pilihan 3: Izin
+                            ListTile(
+                              leading: const Icon(Icons.assignment_turned_in,
+                                  color: primaryBlue),
+                              title: const Text('Izin'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka formulir Izin");
+                                _type = "IZIN";
+                                _navigateToAbsence(context);
+                              },
+                            ),
 
-// // To get the offset in minutes:
-//             int offsetInMinutes = timeZoneOffset.inMinutes;
+                            // Pilihan 4: PH (Public Holiday / Kerja di Hari Libur)
+                            ListTile(
+                              leading: const Icon(Icons.calendar_month,
+                                  color: primaryBlue),
+                              title: const Text('PH'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka formulir PH");
+                                _type = "PH";
+                                _navigateToAbsence(context);
+                              },
+                            ),
+                            const SizedBox(height: 20), // Jarak aman bawah
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+                // SPD
+                else if (index == 3) {
+                  Route route = MaterialPageRoute<void>(
+                      builder: (context) => MainMenuAbsensi());
+                  Navigator.push<void>(context, route);
+                }
+                // 2. JIKA MENU PROFILE (INDEX 4) DIKLIK
+                else if (index == 4) {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    builder: (BuildContext context) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 12, bottom: 8),
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                'Akun Saya',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const Divider(),
+                            ListTile(
+                              leading: const Icon(Icons.account_box,
+                                  color: primaryBlue),
+                              title: const Text('My Account'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka My Account");
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.lock_reset,
+                                  color: primaryBlue),
+                              title: const Text('Change Password'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Membuka Change Password");
+                              },
+                            ),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.logout, color: Colors.red),
+                              title: const Text('Logout',
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold)),
+                              onTap: () {
+                                Navigator.pop(context);
+                                print("Proses Logout");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const LoginPage(
+                                            title: "ABSENCE",
+                                          )),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+                // 3. LOGIKA UNTUK MENU LAIN (HOME, APPROVAL, SPD)
+                else {
+                  // Jalankan setState atau pindah halaman biasa di sini
+                }
+              },
 
-// // To format the offset as a string like "+HH:MM" or "-HH:MM":
-//             String formattedOffset = '';
-//             if (timeZoneOffset.isNegative) {
-//               formattedOffset += '-';
-//             } else {
-//               formattedOffset += '+';
-//             }
-//             formattedOffset +=
-//                 '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
-//             formattedOffset +=
-//                 '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.assignment_turned_in),
+                  label: 'Approval',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.timer),
+                  label: 'Attendance', // Sedikit koreksi typo dari 'Attendence'
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.assignment_ind),
+                  label: 'SPD',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-//             print('Time Zone Offset (Duration): $timeZoneOffset');
-//             print('Time Zone Offset (in Hours): $offsetInHours');
-//             print('Time Zone Offset (in Minutes): $offsetInMinutes');
-//             print('Formatted Time Zone Offset: $formattedOffset');
+  Widget _buildNewsCard(String title, String artikel,
+      {required VoidCallback onTap}) {
+    return Container(
+      width: 270,
+      margin: const EdgeInsets.only(right: 15),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(
+            12), // Menjaga efek ripple tetap di dalam lengkungan
+        child: Ink(
+          decoration: BoxDecoration(
+            color: accentBlue,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                artikel,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            // print('Current UTC Time: ${DateTime.now().toUtc()}');
-            // DateTime dateTime = DateTime.now();
-            // final DateTime now = DateTime.now();
-            // final Duration timeZoneOffset = now.timeZoneOffset;
-            // print(dateTime.timeZoneName);
-            // print(dateTime.timeZoneOffset);
-            // print(
-            //     'Time zone offset from UTC: ${timeZoneOffset.inHours} hours and ${timeZoneOffset.inMinutes.remainder(60)} minutes');
-
-            // print(DateTime.now().timeZoneOffset.inHours);
-            // print(DateTime.now().timeZoneOffset.inMinutes.remainder(60));
-
-            // print('-----------');
-            // print('Current local time: ${DateTime.now()}');
-            // print('GMT Offset: ${DateTime.now().timeZoneOffset}');
-            // print(
-            //     'GMT Offset in hours: ${DateTime.now().timeZoneOffset.inHours}');
-            // print(
-            //     'GMT Offset in minutes: ${DateTime.now().timeZoneOffset.inMinutes}');
-
-            // _showDialogDownload();
-
-            // _launchWebUrl();
-
-            // print('getcompany');
-
-            // urlschemaroot();
-            // getdata();
-
-            // getdata();
-            // print(menuItems);
-            // showLoadingDialog(context); // show our loading dialog
-            // await Future.delayed(
-            //     const Duration(seconds: 2)); // waiting for a second
-            // hideLoadingDialog(context);
-
-            // //LoadingScreen.instance().show(context: context); // show our dialog
-            // await Future.delayed(
-            //     const Duration(seconds: 1)); // wait for a second
-            // if (mounted) {
-            //   //LoadingScreen.instance().show(
-            //       context: context,
-            //       text: "Almost done.."); // then we update our text
-            // } // !! I believe we don't need to use the mounted property since we won't be using our 'pop' function anymore.
-            // await Future.delayed(
-            //     const Duration(seconds: 1)); // wait for a second
-            // //LoadingScreen.instance().hide(); // then we hide our dialog
-
-            // Route route = MaterialPageRoute<void>(
-            //     builder: (context) => SyncfusionDatePage());
-            // Navigator.push<void>(context, route);
-          },
-          tooltip: 'Increment',
-          child: const Icon(Icons.refresh),
-        ), // This trailing comma makes auto-formatting nicer for build methods.
+  Widget _buildMenuCard(
+      String title, String assetPath, Color bgColor, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Mengganti Icon dengan Image.asset pembatas ukuran
+            Image.asset(
+              assetPath,
+              height: 40, // Ukuran ideal untuk ikon menu grid
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1059,6 +939,58 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(context);
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  _showDialogDebug() async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: TextField(
+                autofocus: true,
+                controller: _strController,
+                keyboardType: TextInputType.text,
+                decoration: InputDecoration(
+                  labelText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5.0),
+                  ),
+                ),
+                //onChanged: (value) {
+                //
+                // },
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: new Text("BATAL"),
+          )),
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _isSwitched = true;
+                strdebug = "On";
+                url_api = _strController.text;
+                _NIKController.text = "";
+              });
+              Navigator.pop(context);
+            },
+            child: new Text("OK"),
+          )),
         ],
       ),
     );
@@ -1107,236 +1039,188 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showFullScreenDialog(
+      BuildContext context, String title, String artikel) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // Allows dismissing by tapping outside
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.white, // Dark background for the dialog
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.white, // Black background for the image
+          body: Stack(
+            children: [
+              // Menggunakan SingleChildScrollView agar konten artikel panjang bisa di-scroll
+              SingleChildScrollView(
+                // PERBAIKAN: Menambahkan padding di seluruh sisi konten teks
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    // Jarak atas disesuaikan agar tidak tertutup tombol close
+                    const SizedBox(height: 80),
+                    Text(
+                      title,
+                      // maxLines dihapus agar judul panjang bisa turun ke baris baru di halaman detail
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize:
+                            20, // Ukuran font judul diperbesar agar lebih proporsional
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Text(
+                      artikel,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                        height:
+                            1.5, // Mengatur spasi antar baris agar lebih nyaman dibaca
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 40, // Adjust position as needed
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black, size: 30),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFullScreenAllDialog(
+      BuildContext context, String title, String artikel) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // Allows dismissing by tapping outside
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.white, // Dark background for the dialog
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.white, // Black background for the image
+          body: Stack(
+            children: [
+              // Menggunakan SingleChildScrollView agar konten artikel panjang bisa di-scroll
+              SingleChildScrollView(
+                // PERBAIKAN: Menambahkan padding di seluruh sisi konten teks
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    // Jarak atas disesuaikan agar tidak tertutup tombol close
+                    const SizedBox(height: 80),
+                    Text(
+                      title,
+                      // maxLines dihapus agar judul panjang bisa turun ke baris baru di halaman detail
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize:
+                            20, // Ukuran font judul diperbesar agar lebih proporsional
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Text(
+                      artikel,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                        height:
+                            1.5, // Mengatur spasi antar baris agar lebih nyaman dibaca
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 40, // Adjust position as needed
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black, size: 30),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   static String getSystemTime() {
     var now = new DateTime.now();
     return new DateFormat("H:m:s").format(now);
   }
 
-  void _navigateToCekKoneksi(BuildContext context) async {
-    String result_id = "";
-    String result_name = "";
-    Map<String, dynamic> result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => ConfigPage(
-                url_api: url_api,
-                token: token,
-              )),
-    );
-    print('_navigateToCekKoneksi : ');
-    print('result : ');
-    print(result);
-    if (result != null) {
-      if (result.length > 0) {
-        print('result : ');
-        print(result['name']);
-        result_id = result['id'];
-        result_name = result['name'];
-        if (result_id == 'CLOSE') {
-          print('CLOSE');
-        } else {
-          setState(() {
-            url_api = result_id;
-            // getconfig();
-            // _url_api_sync = result_name;
-            // print('_url_api : ' + _url_api);
-            // print('_url_api_sync : ' + _url_api_sync);
-          });
-        }
-      }
-    }
+  Future<int> getFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      listcompany_id = prefs.getString("listcompany_id") ?? "";
+      listcompany_remark = prefs.getString("listcompany_remark") ?? "";
+      company_id = prefs.getString("company_id") ?? "";
+      company_name = prefs.getString("company_name") ?? "";
+      employee_id = prefs.getString("employee_id") ?? "";
+      employee_name = prefs.getString("employee_name") ?? "";
+      employee_personalid = prefs.getString("employee_personalid") ?? "";
+      employee_fingerid = prefs.getString("employee_fingerid") ?? "";
+      office_id = prefs.getString("office_id") ?? "";
+      employee_dateofbirth = prefs.getString("employee_dateofbirth") ?? "";
+      employee_gender = prefs.getString("employee_gender") ?? "";
+      divisi_name = prefs.getString("divisi_name") ?? "";
+      database_name = prefs.getString("database_name") ?? "";
+      shift_id = prefs.getString("shift_id") ?? "";
+      url_api_slide = prefs.getString("url_api_slide") ?? "";
+      url_api_image = prefs.getString("url_api_image") ?? "";
+      device_info = prefs.getString("device_info") ?? "";
+      department_name = prefs.getString("department_name") ?? "";
+      office_name = prefs.getString("office_name") ?? "";
+      company_name2 = prefs.getString("company_name2") ?? "";
+      employee_type = prefs.getString("employee_type") ?? "";
+    });
+    return 0;
   }
 
-  void _navigateToError(BuildContext context) async {
+  void _navigateToFaceDetector(BuildContext context, String modeAbsen) async {
     Route route = MaterialPageRoute<void>(
-        builder: (context) => ErrorPage(
-              url_api: url_api,
-              token: token,
+        builder: (context) => FaceDetectorCameraScreen(
+              modeAbsen: modeAbsen,
+              url_api: widget.url_api,
+              token: widget.token,
+              type: _type,
+              apikey: widget.apikey,
+              employee_id: employee_id,
+              employee_personalid: employee_personalid,
+              employee_name: employee_name,
+              latitude: strlatitude,
+              longitude: strlongitude,
+              date_yesterday: "",
+              // camera: firstCamera,
             ));
     Navigator.push<void>(context, route);
   }
 
-  void _navigateToDownload(BuildContext context) async {
-    Route route = MaterialPageRoute<void>(builder: (context) => DownloadPage());
-    Navigator.push<void>(context, route);
-  }
-
-  void _navigateToCamera(BuildContext context) async {
-    String strRemark = "";
-    String tglRemark = tglFormat.format(now);
-    _tanggal = newFormat.format(now);
-    strRemark = "Absen Online - Android Mobile Apps \n" +
-        "202250101010 - Suhendra \n" +
-        dayNameInd +
-        ", " +
-        tglRemark +
-        " " +
-        strTimeZone +
-        "\n" +
-        _currentAddress;
-    print('strRemark : ');
-    print(strRemark);
-    Route route = MaterialPageRoute<void>(
-        builder: (context) => CameraWithRemarkScreen(remark: strRemark));
-    Navigator.push<void>(context, route);
-  }
-
-  void _navigateToCamera2(BuildContext context) async {
-    // final cameras = await availableCameras();
-    // final firstCamera = cameras[1];
-
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //       builder: (context) => CameraHomePage(
-    //             // camera: firstCamera,
-    //           )),
-    // );
-  }
-
-  void listcompany() {
-    setState(() {
-      isLoading = true;
-    });
-    fh.listcompany("company/show", url_api).then((resultcompany) {
-      print(resultcompany);
-      if (resultcompany.isNotEmpty) {
-        menuItems.clear();
-        setState(() {
-          for (var rows in resultcompany) {
-            print(rows['name']);
-            menuItems.add(MenuItem(rows['name'], rows['value']));
-          }
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-        _showDialog("Data Company is Empty");
-      }
-      fh.listcompany("company/slider", url_api).then((resultslider) {
-        print(resultslider);
-        if (resultslider.isNotEmpty) {
-          imageslidePaths.clear();
-          setState(() {
-            imageslidePaths = resultslider;
-          });
-          setState(() {
-            isLoading = false;
-          });
-        } else {
-          setState(() {
-            isLoading = false;
-          });
-          _showDialog("Data Banner is Empty");
-        }
-      });
-    });
-  }
-
-  void listNIK() {
-    db.getNIK().then((resultsNIK) {
-      menuNIKS.clear();
-      if (resultsNIK.isNotEmpty) {
-        setState(() {
-          for (var rows in resultsNIK) {
-            print(rows['personalid']);
-            menuNIKS.add(MenuNIK(rows['personalid'], rows['name']));
-          }
-        });
-      }
-    });
-  }
-
-  void employee() {
-    setState(() {
-      // isLoading = true;
-      _year = yearFormat.format(dt);
-      _month = monthFormat.format(dt);
-    });
-    showLoadingDialog("Processing...", context);
-    //LoadingScreen.instance().show(context: context, text: "Processing...");
-    fh
-        .employee(NIK, database_name, apikey, token, "employee/show", url_api)
-        .then((result) {
-      print(result);
-
-      if (result.isNotEmpty) {
-        result.forEach((value) {
-          setState(() {
-            office_id = value['office_id'];
-            company_id = value['company_id'];
-            employee_id = value['employee_id'];
-            employee_name = value['employee_name'];
-            employee_personalid = value['employee_personalid'];
-            employee_fingerid = value['employee_fingerid'];
-            office_id = value['office_id'];
-            employee_gender = value['employee_gender'] ?? "";
-            employee_dateofbirth =
-                newFormat.format(DateTime.parse(value['employee_dateofbirth']));
-            divisi_name = value['division_name'] ?? "";
-            office_name = value['office_name'] ?? "";
-            department_name = value['department_name'] ?? "";
-            company_name2 = value['company_name'] ?? "";
-            employee_type = value['employee_type'] ?? "";
-            print("employee_type : " + employee_type);
-            // db.saveNIK(nik);
-            db.deleteNIKbyid(employee_personalid).then((result) {
-              db
-                  .saveNIK(NIKS(employee_personalid, employee_name))
-                  .then((result) {
-                listNIK();
-              });
-            });
-          });
-        });
-        if (employee_type == "EMP") {
-          fh
-              .employeeshift(database_name, _year, _month, employee_id, apikey,
-                  token, "employeeshift/show", url_api)
-              .then((resultshift) {
-            hideLoadingDialog(context);
-            // //LoadingScreen.instance().hide();
-            if (resultshift.isNotEmpty) {
-              resultshift.forEach((value) {
-                shift_id = value['employeeshift_' + daynow] ?? "";
-                shift_id = shift_id.trim();
-                print('SHIFT ID : ' + daynow);
-                print(value['employeeshift_' + daynow] ?? "");
-                print(shift_id);
-              });
-              if (shift_id == "") {
-                _showDialog("Anda Belum Memiliki Jadwal Shift Hari ini");
-              } else {
-                setIntoSharedPreferences().then((hasils) {
-                  _navigateToAbsence(context);
-                });
-              }
-            } else {
-              _showDialog("Anda Belum Memiliki Jadwal Shift");
-            }
-          });
-        } else {
-          hideLoadingDialog(context);
-          if (_type == "ABSEN") {
-            setIntoSharedPreferences().then((hasils) {
-              _navigateToAbsence(context);
-            });
-          } else {
-            _showDialog("Mohon hubungi atasan anda");
-          }
-        }
-      } else {
-        hideLoadingDialog(context);
-        //LoadingScreen.instance().hide();
-        _showDialog("Data Pegawai tidak ditemukan");
-      }
-    });
-  }
-
   void _navigateToAbsence(BuildContext context) async {
-    // final cameras = await availableCameras();
-    // final firstCamera = cameras[1];
     Route route = MaterialPageRoute<void>(
         builder: (context) => AbsencePage(
               url_api: url_api,
@@ -1349,38 +1233,6 @@ class _HomePageState extends State<HomePage> {
               // camera: firstCamera,
             ));
     Navigator.push<void>(context, route);
-  }
-
-  void _navigateToDinas(BuildContext context) async {
-    Route route = MaterialPageRoute<void>(
-        builder: (context) => DinasPage(
-            url_api: url_api,
-            token: token,
-            type: _type,
-            apikey: apikey,
-            imageslidePaths: imageslidePaths,
-            url_api_slide: url_api_slide,
-            strdebug: strdebug));
-    Navigator.push<void>(context, route);
-  }
-
-  Future<String> getconfig() async {
-    db.getConfig().then((hasils) {
-      print(hasils);
-
-      if (hasils.length > 0) {
-        hasils.forEach((rows) {
-          // print(rows['qty']);
-          setState(() {
-            url_api = rows['config1'];
-          });
-        });
-      } else {
-        _navigateToCekKoneksi(context);
-        // db.saveConfig(Config(url_api, url_api, url_api));
-      }
-    });
-    return url_api;
   }
 
   Future<int> setIntoSharedPreferences() async {
@@ -1413,7 +1265,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _refresh() async {
-    listcompany();
     _getCurrentLocation();
   }
 
@@ -1456,140 +1307,6 @@ class _HomePageState extends State<HomePage> {
 // to hide our current dialog
   void hideLoadingDialog(BuildContext context) {
     Navigator.of(context).pop();
-  }
-
-  void urlschemaroot() {
-    uri = Uri.parse(url_api);
-    print(uri);
-
-    String host = uri.host;
-    print(host);
-
-    String authority = uri.authority;
-    print(authority); // =
-    String scheme = uri.scheme;
-    print(scheme); // http
-
-    url_api_root = scheme + "://" + authority + "/";
-    print(url_api_root);
-
-    if (scheme == "http") {
-      url_api_slide = url_api_root + "api-ci3-dev/assets/upload/slides/";
-      url_api_image = url_api_root + "api-ci3-dev/assets/upload/absen/";
-      listcompany();
-    } else if (scheme == "https") {
-      if (_isSwitched == true) {
-        url_api_image = url_image_dev + "assets/upload/absen/";
-        url_api_slide = url_image_dev + "assets/upload/slides/";
-        listcompany();
-      } else {
-        url_api_image = url_image_prod + "assets/upload/absen/";
-        url_api_slide = url_image_prod + "assets/upload/slides/";
-        listcompany();
-      }
-    }
-    print(url_api_slide);
-    print(url_api_image);
-  }
-
-  String generateSignature(String secretKey, String timestamp) {
-    // header
-    String header = base64Encode(utf8.encode(jsonEncode({
-      'typ': 'API',
-      'alg': 'SHA256',
-    })));
-    String payload = base64Encode(utf8.encode(secretKey));
-
-    String ts = base64Encode(utf8.encode(timestamp));
-
-    // gabungkan
-    String secretkey = '$header.$payload.$ts';
-
-    // hasil final
-    return base64Encode(utf8.encode(secretkey));
-  }
-
-  void getapikey(String secretkey, String timestamp) {
-    showLoadingDialog("Processing...", context);
-    fh.apikey(secretkey, "apikey/show", url_api).then((hasils) {
-      print('apikey :');
-      print(hasils);
-      if (hasils.isNotEmpty) {
-        apikey = hasils;
-        fh.token(apikey, url_api).then((hasils) {
-          print('token :');
-          print(hasils);
-          if (hasils.isNotEmpty) {
-            token = hasils;
-            // fh.HOdate(apikey, token, "headofficedate/show", url_api)
-            //     .then((resultdate) {
-            //   print(resultdate);
-
-            fh.Setting("apk_version", apikey, token, "setting/show", url_api)
-                .then((resultversion) {
-              if (resultversion.isNotEmpty) {
-                resultversion.forEach((value) {
-                  _version_id = value['setting_value'] ?? "";
-                  if (projectVersion == _version_id) {
-                    hideLoadingDialog(context);
-                    employee();
-                  } else {
-                    // _showDialogDownload();
-                    hideLoadingDialog(context);
-                    _navigateToDownload(context);
-                  }
-                });
-              } else {
-                hideLoadingDialog(context);
-                _showDialog("Versi APK tidak ditemukan");
-              }
-            });
-            // });
-          } else {
-            hideLoadingDialog(context);
-            _showDialog("Token is Empty");
-          }
-        });
-      } else {
-        hideLoadingDialog(context);
-        _showDialog("API Key is Empty");
-      }
-    });
-  }
-
-  void proses() {
-    DateTime now = DateTime.now();
-    Duration timeZoneOffset = now.timeZoneOffset;
-    int offsetInHours = timeZoneOffset.inHours;
-    int offsetInMinutes = timeZoneOffset.inMinutes;
-    String formattedOffset = '';
-    if (timeZoneOffset.isNegative) {
-      formattedOffset += '-';
-    } else {
-      formattedOffset += '+';
-    }
-    formattedOffset +=
-        '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
-    formattedOffset +=
-        '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
-    String strTIMESTAMP = dailyFormat.format(now) +
-        "T" +
-        hourFormat.format(now) +
-        formattedOffset;
-    // print(strTIMESTAMP);
-    String signature = generateSignature(
-      database_name,
-      strTIMESTAMP,
-    );
-    // _showDialog(database_name);
-    // _showDialog(strTIMESTAMP);
-    // _showDialog(signature);
-    if (signature == "") {
-      _showDialog("signature is null");
-    } else {
-      print("Signature: $signature");
-      getapikey(signature, strTIMESTAMP);
-    }
   }
 
   Future<void> initPlatformState() async {
