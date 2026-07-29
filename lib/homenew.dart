@@ -709,7 +709,7 @@ class _HomeNewPageState extends State<HomeNewPage> {
           child: BottomNavigationBar(
             currentIndex: (_bottomNavIndex == 5 || _bottomNavIndex == 14)
                 ? 4 // Jika halaman Change Password (5) aktif, sorot tab Profile (4)
-                : ([6, 7, 8, 9, 10, 15].contains(_bottomNavIndex)
+                : ([6, 7, 8, 9, 10, 15, 16].contains(_bottomNavIndex)
                     ? 2 // Jika sub-halaman cuti/sakit aktif, sorot tab Leave (2)
                     : ([11, 12, 13].contains(_bottomNavIndex)
                         ? 0 // 🔑 SOLUSI: Jika index 11 atau 12 aktif, sorot tab Home (0)
@@ -877,7 +877,7 @@ class _HomeNewPageState extends State<HomeNewPage> {
                   // Tambahkan aksi navigasi ke form Leave Request di sini
 
                   setState(() {
-                    _bottomNavIndex = 6;
+                    _bottomNavIndex = 16;
                   });
                 },
               ),

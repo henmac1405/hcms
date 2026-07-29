@@ -68,7 +68,7 @@ class _LoginNewPageState extends State<LoginNewPage> {
   DatabaseHelper db = new DatabaseHelper();
   HelperFunction fh = new HelperFunction();
   final _usernameController = TextEditingController(text: '');
-  final _passwordController = TextEditingController(text: '');
+  final _passwordController = TextEditingController(text: '08051992');
   // final _passwordController = TextEditingController(text: 'transsnow');
   final TextEditingController _NIKController = TextEditingController();
 

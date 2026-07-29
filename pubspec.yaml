@@ -66,6 +66,7 @@ dependencies:
   pdf: any
   printing: any
   open_filex: ^4.7.0
+  share_plus: ^7.2.2
   # syncfusion_flutter_datepicker: ^27.2.5
   # syncfusion_flutter_datepicker: ^28.1.33
   # calendar_date_picker2: ^2.0.1

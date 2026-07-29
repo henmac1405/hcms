@@ -1032,6 +1032,92 @@ class HelperFunction {
     return data ?? [];
   }
 
+  Future<List> requestabsen_history(
+      String database_name,
+      String employee_personalid,
+      String apikey,
+      String token,
+      String api_name,
+      String url_api) async {
+    List? data;
+    String strerror = "";
+    DateTime now = DateTime.now();
+    Duration timeZoneOffset = now.timeZoneOffset;
+    int offsetInHours = timeZoneOffset.inHours;
+    int offsetInMinutes = timeZoneOffset.inMinutes;
+    String formattedOffset = '';
+    if (timeZoneOffset.isNegative) {
+      formattedOffset += '-';
+    } else {
+      formattedOffset += '+';
+    }
+    formattedOffset +=
+        '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
+    formattedOffset +=
+        '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
+    String strTIMESTAMP = dailyFormat.format(now) +
+        "T" +
+        hourFormat.format(now) +
+        formattedOffset;
+    String username = 'admin';
+    String password = '1234';
+    String basicAuth =
+        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+    Map<String, String> headers = {
+      "APIKEY": apikey,
+      "TIMESTAMP": strTIMESTAMP,
+      "TOKEN": token,
+      'authorization': basicAuth
+    };
+
+    Map<String, dynamic> params = {
+      "database_name": database_name,
+      "employee_personalid": employee_personalid,
+    };
+    // print(token);
+    print(url_api + api_name);
+    // print(url_api);
+    print(headers);
+    print(params);
+
+    try {
+      final http.Response response = await http.post(
+        Uri.parse(url_api + api_name),
+        headers: headers,
+        body: params,
+      );
+      print('response  : ' + api_name + ' ' + response.statusCode.toString());
+      print(response.body);
+      var json = jsonDecode(response.body);
+      if (response.body.length > 0) {}
+      if (response.statusCode == 200) {
+        print('json');
+        print(json['data']);
+        data = json['data'];
+        // insertlogerror(
+        //     "version_get : " + response.body.toString(), _device_id, params.toString(), url_api);
+        // Do whatever you want to do with json.
+      } else {
+        // _toastInfo(json['message']);
+      }
+      //return Album.fromJson(jsonDecode(response.body));
+    } on SocketException catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+
+      //return "Error on Server";
+      // throw Exception("Error on server");
+    } catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+
+      //return "Error on Server";
+      // throw Exception("Error on server");
+    }
+    //return Album.fromJson(jsonDecode(response.body));
+    return data ?? [];
+  }
+
   Future<List> absen_history(String database_name, String employee_fingerid,
       String apikey, String token, String api_name, String url_api) async {
     List? data;
@@ -1199,6 +1285,256 @@ class HelperFunction {
     }
     //return Album.fromJson(jsonDecode(response.body));
     return data ?? [];
+  }
+
+  Future<String> requestabsen_insert(
+      File imageFile,
+      String database_name,
+      String employee_personalid,
+      String employee_name,
+      String requestabsence_subject,
+      String requestabsence_datestart,
+      String requestabsence_dateend,
+      String requestabsence_createlat,
+      String requestabsence_createlon,
+      String created_by,
+      String requestabsence_file,
+      String imageuploadname,
+      String apikey,
+      String token,
+      String api_name,
+      String url_api) async {
+    List? data;
+    String strcode = "";
+    String imagePath = imageFile.path;
+
+    // 1. Format Waktu & Timezone Offset
+    DateTime now = DateTime.now();
+    Duration timeZoneOffset = now.timeZoneOffset;
+    String formattedOffset = timeZoneOffset.isNegative ? '-' : '+';
+    formattedOffset +=
+        '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
+    formattedOffset +=
+        '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
+    String strTIMESTAMP = dailyFormat.format(now) +
+        "T" +
+        hourFormat.format(now) +
+        formattedOffset;
+
+    // 2. Kredensial & Header Auth
+    String username = 'admin';
+    String password = '1234';
+    String basicAuth =
+        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+
+    Map<String, String> headers = {
+      "APIKEY": apikey,
+      "TIMESTAMP": strTIMESTAMP,
+      "TOKEN": token,
+      'authorization': basicAuth
+    };
+
+    // 3. Kumpulan Parameter Teks (Semua nilai harus berupa String)
+    Map<String, String> params = {
+      "database_name": database_name,
+      "employee_personalid": employee_personalid,
+      "employee_name": employee_name,
+      "requestabsence_subject": requestabsence_subject,
+      "requestabsence_datestart": requestabsence_datestart,
+      "requestabsence_dateend": requestabsence_dateend,
+      "requestabsence_createlat": requestabsence_createlat,
+      "requestabsence_createlon": requestabsence_createlon,
+      "created_by": created_by,
+      "requestabsence_file": requestabsence_file,
+      "created_date": requestabsence_datestart
+    };
+
+    print(apikey);
+    print(token);
+    print(api_name);
+    print(url_api);
+    print(headers);
+    print(params);
+
+    try {
+      // 4. Inisialisasi Multipart Request
+      var request =
+          http.MultipartRequest('POST', Uri.parse(url_api + api_name));
+
+      // 5. Masukkan Headers dan Teks Fields
+      request.headers.addAll(headers);
+      request.fields.addAll(params);
+      request.fields['filename'] = imageuploadname;
+
+      // 6. Masukkan File Gambar
+      String fileName = imagePath.split('/').last;
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file', // Sesuaikan dengan key multipart yang diminta API Backend Anda
+          imagePath,
+          filename: fileName,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+
+      // 7. Kirim Request dan Konversi Hasilnya ke Response Biasa
+      var streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('response : ' + api_name + ' ' + response.statusCode.toString());
+      print(response.body);
+
+      // var json = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        var json = jsonDecode(response
+            .body); // Hanya decode jika sukses atau format JSON pasti valid
+        data = json['data'];
+        _toastInfo(json['message']);
+        strcode = "sukses";
+      }
+      // 2. DETEKSI ERROR 404 DENGAN AMAN
+      else if (response.statusCode == 404) {
+        // Amankan pembacaan pesan dari JSON, gunakan fallback jika bukan JSON
+        try {
+          var json = jsonDecode(response.body);
+          _toastInfo(json['message'] ?? 'Halaman atau API tidak ditemukan');
+          strcode = json['message'] ?? 'Halaman atau API tidak ditemukan';
+        } catch (_) {
+          _toastInfo('Error 404: Endpoint API tidak ditemukan di server.');
+        }
+      }
+      // 3. PENANGANAN ERROR LAINNYA
+      else {
+        try {
+          var json = jsonDecode(response.body);
+          strcode = response.statusCode.toString() +
+              " : " +
+              (json['message'] ?? 'Error');
+          _toastInfo(response.statusCode.toString() +
+              " : " +
+              (json['message'] ?? 'Error'));
+        } catch (_) {
+          strcode = 'Error ${response.statusCode}: Terjadi kesalahan server.';
+          _toastInfo('Error ${response.statusCode}: Terjadi kesalahan server.');
+        }
+      }
+    } on SocketException catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+      db.saveError(
+          Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
+    } catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+      db.saveError(
+          Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
+    }
+
+    return strcode;
+  }
+
+  Future<String> requestabsen_insert_(
+      File imageFile,
+      String database_name,
+      String employee_personalid,
+      String requestabsence_subject,
+      String requestabsence_datestart,
+      String requestabsence_dateend,
+      String requestabsence_createlat,
+      String requestabsence_createlon,
+      String created_by,
+      String requestabsence_file,
+      String apikey,
+      String token,
+      String api_name,
+      String url_api) async {
+    List? data;
+
+    String strcode = "";
+    DateTime now = DateTime.now();
+    Duration timeZoneOffset = now.timeZoneOffset;
+    int offsetInHours = timeZoneOffset.inHours;
+    int offsetInMinutes = timeZoneOffset.inMinutes;
+    String formattedOffset = '';
+    if (timeZoneOffset.isNegative) {
+      formattedOffset += '-';
+    } else {
+      formattedOffset += '+';
+    }
+    formattedOffset +=
+        '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
+    formattedOffset +=
+        '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
+    String strTIMESTAMP = dailyFormat.format(now) +
+        "T" +
+        hourFormat.format(now) +
+        formattedOffset;
+    String username = 'admin';
+    String password = '1234';
+    String basicAuth =
+        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+    Map<String, String> headers = {
+      "APIKEY": apikey,
+      "TIMESTAMP": strTIMESTAMP,
+      "TOKEN": token,
+      'authorization': basicAuth
+    };
+
+    Map<String, dynamic> params = {
+      "database_name": database_name,
+      "requestabsence_subject": requestabsence_subject,
+      "requestabsence_datestart": requestabsence_datestart,
+      "requestabsence_dateend": requestabsence_dateend,
+      "requestabsence_file": requestabsence_file,
+      "requestabsence_createlat": requestabsence_createlat,
+      "requestabsence_createlon": requestabsence_createlon,
+      "created_by": created_by,
+    };
+    print(apikey);
+    print(token);
+    print(api_name);
+    print(url_api);
+    print(headers);
+    print(params);
+    try {
+      final http.Response response = await http.post(
+        Uri.parse(url_api + api_name),
+        headers: headers,
+        body: params,
+      );
+      print('response  : ' + api_name + ' ' + response.statusCode.toString());
+      print(response.body);
+      // if (response.body.length > 0) {}
+      // print('1');
+      var json = jsonDecode(response.body);
+      // print('2');
+      if (response.statusCode == 200) {
+        // print('3');
+        // print('json');
+        // print(json['data']);
+        // data = json['data'];
+        strcode = "sukses";
+      } else {
+        strcode = json['message'];
+        db.saveError(Error(
+            api_name + " " + strcode + " " + employee_personalid + " ",
+            "",
+            DateTime.now().toString()));
+        _toastInfo(json['message']);
+      }
+    } on SocketException catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+      // db.saveError(
+      //     Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
+    } catch (e) {
+      print(e);
+      _toastInfo(api_name + ' ' + e.toString());
+      // db.saveError(
+      //     Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
+    }
+    return strcode;
   }
 
   Future<String> cuti_insert(

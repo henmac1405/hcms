@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'user_session.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PdfParamScreen extends StatefulWidget {
   final ValueChanged<int> onIndexChanged;
@@ -387,6 +390,32 @@ class _PdfParamScreen extends State<PdfParamScreen> {
     );
   }
 
+  Future<void> _shareFormCutiToWhatsApp(Uint8List pdfBytes, String namaKaryawan,
+      String tglmulai, String tglakhir) async {
+    try {
+      // 1. Dapatkan direktori folder sementara di HP
+      final tempDir = await getTemporaryDirectory();
+
+      // 2. Buat file fisik PDF sementara dengan nama yang dinamis
+      final String fileName =
+          'Form_Cuti_${namaKaryawan.replaceAll(' ', '_')}_${tglmulai.replaceAll(' ', '_')}_${tglakhir.replaceAll(' ', '_')}.pdf';
+      final tempFile = File('${tempDir.path}/$fileName');
+
+      // 3. Tulis data bytes generator ke dalam file tersebut
+      await tempFile.writeAsBytes(pdfBytes);
+
+      // 4. Buka Share Sheet Sistem (Pengguna tinggal pilih icon WhatsApp)
+      await Share.shareXFiles(
+        [XFile(tempFile.path)],
+        text:
+            'Halo, berikut saya lampirkan Form Permohonan Cuti atas nama $namaKaryawan.',
+        subject: 'Form Permohonan Cuti - $namaKaryawan',
+      );
+    } catch (e) {
+      debugPrint("Gagal membagikan form cuti: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -459,6 +488,72 @@ class _PdfParamScreen extends State<PdfParamScreen> {
                   onPressed: () {
                     // Navigator.of(context).pop();
                     widget.onIndexChanged(6);
+                  },
+                ),
+              ),
+            ),
+            // 2. TOMBOL SHARE
+            Positioned(
+              bottom: 24, // Jarak dari bawah layar
+              right: 284, // Jarak dari kanan layar
+              child: CircleAvatar(
+                radius:
+                    26, // Ukuran tombol sedikit lebih besar agar nyaman ditekan
+                backgroundColor: Colors.black
+                    .withOpacity(0.65), // Latar belakang lebih kontras
+                child: IconButton(
+                  icon: const Icon(Icons.share, color: Colors.white, size: 26),
+                  onPressed: () async {
+                    // 1. Tampilkan loading spinner agar pengguna tahu PDF sedang diproses
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    );
+
+                    try {
+                      // 2. Panggil fungsi generator statis Anda untuk mendapatkan Uint8List bytes
+                      // Catatan: Ganti 'NamaClassGenerator' sesuai dengan nama class tempat fungsi Anda berada
+                      // Ambil nilainya dari variabel screen/widget Anda (contoh: widget.namaLengkap)
+                      final Uint8List pdfBytes = await generateFormCuti(
+                        namaLengkap: UserSession.employee_name,
+                        nik: UserSession.employee_personalid,
+                        jabatan: UserSession.position_name,
+                        departemen: UserSession.department_name,
+                        lokasiKerja: UserSession.office_name,
+                        jenisCuti: widget.leave_type,
+                        tanggalMulai: widget.leave_datestart,
+                        tanggalSelesai: widget.leave_dateend,
+                        detailCutiKhusus: "",
+                        jatahCuti: widget.jatahCuti,
+                        jumlahCuti: widget.leave_qty,
+                        sisaCuti: widget.sisaCuti,
+                        catatanKeperluan: widget.leave_descr,
+                        alamatCuti: widget.leave_alamatkontak,
+                        nomorTelepon: widget.leave_nokontak,
+                        tanggalPengajuan: widget.leave_date,
+                      );
+
+                      // 3. Tutup dialog loading setelah proses generate selesai
+                      if (context.mounted) Navigator.pop(context);
+
+                      // 4. Kirim bytes ke fungsi share_plus eksternal yang telah dibuat sebelumnya
+                      // Fungsi _shareFormCutiToWhatsApp menerima (Uint8List bytes, String namaKaryawan)
+                      await _shareFormCutiToWhatsApp(
+                          pdfBytes,
+                          UserSession.employee_name,
+                          widget.leave_datestart,
+                          widget.leave_dateend);
+                    } catch (e) {
+                      // Tutup loading jika terjadi error saat memproses dokumen
+                      if (context.mounted) Navigator.pop(context);
+                      debugPrint("Gagal memproses share PDF: $e");
+                    }
                   },
                 ),
               ),

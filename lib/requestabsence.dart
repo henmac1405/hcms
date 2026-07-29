@@ -67,7 +67,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
 
   String _selectedJenisIzinID = "Personal";
   String _selectedJenisIzinName = "Personal";
-
+  String strError = "";
   // Fungsi inti untuk memicu pengambilan gambar berdasarkan sumber yang dipilih
   Future<void> _pickDocument(ImageSource source, String type) async {
     try {
@@ -118,12 +118,12 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
       isLoading = true;
     });
     fh
-        .absen_history(
+        .requestabsen_history(
             UserSession.database_name,
-            UserSession.employee_fingerid,
+            UserSession.employee_personalid,
             UserSession.apikey,
             UserSession.token,
-            "absen/showsakit_izin",
+            "requestabsen/showrequestabsen",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
@@ -190,11 +190,11 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
       });
 
       //insert data absen
-      if (UserSession.debug == "on") {
-        insertdata(imageFile);
-      } else {
-        _showDialog("Data Production...!!!!");
-      }
+      // if (UserSession.debug == "on") {
+      insertdata(imageFile);
+      // } else {
+      //   _showDialog("Data Production...!!!!");
+      // }
     }).catchError((e) {
       print(e);
       print('error : _getAddressFromLatLng');
@@ -243,39 +243,27 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
     uploadimage_name = UserSession.employee_id + "_" + imageFormat.format(now);
     print("insertdata2");
     fh
-        .absenceonline_insert_new(
+        .requestabsen_insert(
             imageFile,
-            uploadimage_name,
             UserSession.database_name,
-            UserSession.employee_id,
-            UserSession.listcompany_id,
-            UserSession.company_id,
-            UserSession.office_id,
             UserSession.employee_personalid,
-            UserSession.employee_fingerid,
             UserSession.employee_name,
-            "IZIN",
-            "00:00:00",
-            date_from,
-            file_image_name,
-            "(" +
-                _selectedJenisIzinID.toUpperCase() +
-                ") " +
-                _subjekController.text,
-            UserSession.employee_type,
             _subjekController.text,
+            date_from,
             date_to,
-            strlongitude,
             strlatitude,
-            UserSession.device_info,
-            "ANDROID MOBILE APPS",
+            strlongitude,
+            UserSession.employee_name,
+            file_image_name,
+            uploadimage_name,
             UserSession.apikey,
             UserSession.token,
-            "absen/insertnew",
+            "requestabsen/requestinsert",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
         isLoading = false;
+        strError = hasils;
       });
       if (hasils == "sukses") {
         _absen_history();
@@ -292,7 +280,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
           _tanggalakhirController.text = _getFormattedTodayStatic();
           _subjekController.text = "";
         });
-        _showDialog("Data Berhasil Disimpan");
+        _showDialog("Pengajuan Absensi Sudah Terkirim");
         //   }
         // });
       } else {
@@ -516,7 +504,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                         _buildFormLabel('Subjek'),
                         _buildTextAreaField(
                           controller: _subjekController,
-                          hintText: 'Masukkan alasan izin',
+                          hintText: 'Masukkan alasan Pengajuan',
                         ),
                         const SizedBox(height: 16),
 
@@ -643,6 +631,15 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Text(
+                  //   strError,
+                  //   style: TextStyle(
+                  //     color: Color(0xFF0F1E4A),
+                  //     fontSize: 18,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // ),
+
                   // ==================== CARD 4: ALUR PERSETUJUAN ====================
                   // Container(
                   //   width: double.infinity,
@@ -717,7 +714,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
 
                         // print(tanggalHasil);
                         if (_subjekController.text == "") {
-                          _showDialog("Subjek Izin Belum Diisi");
+                          _showDialog("Subjek Pengajuan Belum Diisi");
                         } else if (_dokumenPendukung != null) {
                           setState(() {
                             isLoading = true;
@@ -787,45 +784,49 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                         else
                           ...() {
                             // 1. Filter data untuk menghilangkan tanggal duplikat DAN memfilter absence_code = "C"
-                            final Set<String> seenDates = {};
-                            final List<dynamic> uniqueHistory =
-                                dataabsen.where((item) {
-                              final String date = item['absence_date'] ?? '';
-                              final String absenceCode = item['absence_code'] ??
-                                  ''; // Ambil nilai absence_code
-
-                              // FILTER UTAMA: Hanya loloskan item jika absence_code bernilai "C"
-                              if (absenceCode != 'I') {
-                                return false;
-                              }
-
-                              // FILTER DUPLIKAT: Skip jika tanggal kosong atau sudah terdaftar sebelumnya
-                              if (date.isEmpty || seenDates.contains(date)) {
-                                return false;
-                              }
-
-                              seenDates
-                                  .add(date); // Tandai tanggal sudah terbaca
-                              return true;
-                            }).toList();
 
                             // 2. Ambil maksimal 5 data unik teratas dan petakan ke widget Row
-                            return uniqueHistory.take(5).map((item) {
-                              String rawDate = item['absence_date'] ?? '';
-                              String statusText = item['absence_reason'] ?? '';
-                              String formattedDate = '-';
-                              String image_url = item['absence_imagein'] ?? '';
+                            return dataabsen.map((item) {
+                              String rawDateStart =
+                                  item['requestabsence_datestart'] ?? '';
+                              String rawDateEnd =
+                                  item['requestabsence_dateend'] ?? '';
+                              String statusText =
+                                  item['requestabsence_subject'] ?? '';
+                              String formattedDateStart = '-';
+                              String formattedDateEnd = '-';
+                              String image_url =
+                                  item['requestabsence_file'] ?? '';
+                              int isapproved =
+                                  item['requestabsence_approved'] ?? 0;
 
-                              print("rawDate2 $rawDate");
+                              if (isapproved == 1) {
+                                statusText = statusText + "   (Approved)";
+                              }
 
-                              if (rawDate.isNotEmpty) {
+                              print("rawDate2 $rawDateStart");
+
+                              if (rawDateStart.isNotEmpty) {
                                 try {
-                                  DateTime parsedDate = DateTime.parse(rawDate);
-                                  formattedDate =
+                                  DateTime parsedDate =
+                                      DateTime.parse(rawDateStart);
+                                  formattedDateStart =
                                       DateFormat('dd MMMM yyyy', 'id_ID')
                                           .format(parsedDate);
                                 } catch (e) {
-                                  formattedDate = rawDate;
+                                  formattedDateStart = rawDateStart;
+                                }
+                              }
+
+                              if (rawDateEnd.isNotEmpty) {
+                                try {
+                                  DateTime parsedDate =
+                                      DateTime.parse(rawDateEnd);
+                                  formattedDateEnd =
+                                      DateFormat('dd MMMM yyyy', 'id_ID')
+                                          .format(parsedDate);
+                                } catch (e) {
+                                  formattedDateEnd = rawDateEnd;
                                 }
                               }
 
@@ -833,7 +834,9 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 0),
                                 child: _buildAttendanceRow(
-                                    dayDate: formattedDate,
+                                    dayDate: formattedDateStart +
+                                        " - " +
+                                        formattedDateEnd,
                                     statusText: statusText,
                                     image_url: image_url),
                               );
@@ -1333,57 +1336,11 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
           trailing: IconButton(
               icon: const Icon(Icons.image),
               onPressed: () {
+                print(UserSession.url_api_image + image_url);
                 widget.onIndexChanged(13);
                 widget.imageurl(UserSession.url_api_image + image_url);
                 widget.DataHistory(dataabsen);
-                // showDialog(
-                //   context: context,
-                //   builder: (context) => Dialog(
-                //     backgroundColor: Colors
-                //         .transparent, // Membuat latar belakang modal tembus pandang
-                //     insetPadding: const EdgeInsets.all(
-                //         20), // Jarak modal dari tepi layar HP
-                //     child: Column(
-                //       mainAxisSize: MainAxisSize.min,
-                //       children: [
-                //         // Tombol Close di Atas Kanan Gambar
-                //         Align(
-                //           alignment: Alignment.centerRight,
-                //           child: IconButton(
-                //             icon: const Icon(Icons.close,
-                //                 color: Colors.white, size: 30),
-                //             onPressed: () => Navigator.pop(context),
-                //           ),
-                //         ),
-                //         const SizedBox(height: 10),
-
-                //         // Wadah Gambar Ukuran Besar
-                //         ClipRRect(
-                //           borderRadius: BorderRadius.circular(16),
-                //           child: Image.network(
-                //             UserSession.url_api_image + image_url,
-                //             width: MediaQuery.of(context).size.width *
-                //                 0.85, // Lebar gambar 85% layar
-                //             fit: BoxFit.contain,
-                //             errorBuilder: (context, error, stackTrace) {
-                //               return Container(
-                //                 padding: const EdgeInsets.all(20),
-                //                 // color: Colors.white,
-                //                 child: const Icon(
-                //                   Icons.image_not_supported_outlined,
-                //                   color: Colors.black,
-                //                   size: 100,
-                //                 ),
-                //               );
-                //             },
-                //           ),
-                //         ),
-                //       ],
-                //     ),
-                //   ),
-                // );
               }),
-          //onTap: () => _navigateToNote(context, items[position]),
         ),
       ],
     );
