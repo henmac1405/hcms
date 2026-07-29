@@ -372,7 +372,7 @@ class _CutiPageState extends State<CutiPage> {
         _tanggalakhirController.text = _getFormattedTodayStatic();
         _subjekController.text = "";
         cuti_history();
-        _showDialog("Data Berhasil Disimpan");
+        _showDialog("Pengajuan Cuti Berhasil");
       } else {
         setState(() {
           isLoading = false;
@@ -838,7 +838,7 @@ class _CutiPageState extends State<CutiPage> {
                                     DateTime parsedDate =
                                         DateTime.parse(leave_date);
                                     formattedDate =
-                                        DateFormat('dd MMMM yyyy', 'id_ID')
+                                        DateFormat('dd MMM yyyy', 'id_ID')
                                             .format(parsedDate);
                                   } catch (e) {
                                     formattedDate = leave_date;
@@ -850,7 +850,7 @@ class _CutiPageState extends State<CutiPage> {
                                     DateTime parsedDate =
                                         DateTime.parse(rawDateStart);
                                     formattedDateStart =
-                                        DateFormat('dd MMMM yyyy', 'id_ID')
+                                        DateFormat('dd MMM yyyy', 'id_ID')
                                             .format(parsedDate);
                                   } catch (e) {
                                     formattedDateStart = rawDateStart;
@@ -864,7 +864,7 @@ class _CutiPageState extends State<CutiPage> {
                                     DateTime parsedDate =
                                         DateTime.parse(rawDateEnd);
                                     formattedDateEnd =
-                                        DateFormat('dd MMMM yyyy', 'id_ID')
+                                        DateFormat('dd MMM yyyy', 'id_ID')
                                             .format(parsedDate);
                                   } catch (e) {
                                     formattedDateEnd = rawDateEnd;

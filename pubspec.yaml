@@ -110,6 +110,7 @@ flutter:
     - assets/idcard_ts.png
     - assets/idcard_tsw.png
     - assets/idcard_tsm.png
+    - assets/noimage.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

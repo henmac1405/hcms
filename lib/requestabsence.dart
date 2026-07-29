@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'app_colors.dart';
 import 'user_session.dart';
@@ -68,6 +72,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
   String _selectedJenisIzinID = "Personal";
   String _selectedJenisIzinName = "Personal";
   String strError = "";
+  String noimagename = "";
   // Fungsi inti untuk memicu pengambilan gambar berdasarkan sumber yang dipilih
   Future<void> _pickDocument(ImageSource source, String type) async {
     try {
@@ -237,10 +242,15 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
             content: Text('Format tanggal salah atau belum dipilih!')),
       );
     }
-
-    file_image_name =
-        UserSession.employee_id + "_" + imageFormat.format(now) + ".jpg";
-    uploadimage_name = UserSession.employee_id + "_" + imageFormat.format(now);
+    if (noimagename == "noimage") {
+      file_image_name = "noimage.jpg";
+      uploadimage_name = "noimage";
+    } else {
+      file_image_name =
+          UserSession.employee_id + "_" + imageFormat.format(now) + ".jpg";
+      uploadimage_name =
+          UserSession.employee_id + "_" + imageFormat.format(now);
+    }
     print("insertdata2");
     fh
         .requestabsen_insert(
@@ -279,6 +289,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
           _tanggalawalController.text = _getFormattedTodayStatic();
           _tanggalakhirController.text = _getFormattedTodayStatic();
           _subjekController.text = "";
+          noimagename = "";
         });
         _showDialog("Pengajuan Absensi Sudah Terkirim");
         //   }
@@ -310,6 +321,36 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
 
     if (result == null) return null;
     return File(result.path); // Mengembalikan objek File yang sudah dikompresi
+  }
+
+  Future<File?> noimage() async {
+    try {
+      // 1. Membaca data binary/bytes dari folder assets aplikasi
+      final ByteData byteData = await rootBundle.load('assets/noimage.png');
+      final Uint8List bytes = byteData.buffer.asUint8List();
+
+      // 2. Mendapatkan akses ke folder penyimpanan sementara milik aplikasi di HP
+      final Directory tempDir = await getTemporaryDirectory();
+
+      // 3. Membuat file fisik baru dan menuliskan bytes gambar ke dalamnya
+      final File tempFile = File('${tempDir.path}/fallback_noimage.png');
+      await tempFile.writeAsBytes(bytes);
+
+      // 4. Memasukkan file tersebut ke dalam variabel _dokumenPendukung
+      setState(() {
+        _dokumenPendukung =
+            tempFile; // Langsung masukkan tempFile karena tipenya sudah File
+        noimagename = "noimage";
+      });
+
+      print("Dokumen kosong, otomatis menggunakan fallback dari asset.");
+
+      // 5. Kembalikan objek tempFile yang berhasil dibuat
+      return tempFile;
+    } catch (e) {
+      print("Gagal mengambil gambar dari asset: $e");
+      return null; // Kembalikan null jika proses gagal
+    }
   }
 
   @override
@@ -724,7 +765,12 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                               await _compressImage(_dokumenPendukung!);
                           _getCurrentLocation(compressedFile!);
                         } else {
-                          _showDialog("Dokumen Pendukung belum dipilih");
+                          setState(() {
+                            isLoading = true;
+                          });
+                          File? noimageFile = await noimage();
+                          _getCurrentLocation(noimageFile!);
+                          // _showDialog("Dokumen Pendukung belum dipilih");
                         }
                       },
                       icon: const Icon(Icons.check_circle,
@@ -811,7 +857,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                                   DateTime parsedDate =
                                       DateTime.parse(rawDateStart);
                                   formattedDateStart =
-                                      DateFormat('dd MMMM yyyy', 'id_ID')
+                                      DateFormat('dd MMM yyyy', 'id_ID')
                                           .format(parsedDate);
                                 } catch (e) {
                                   formattedDateStart = rawDateStart;
@@ -823,7 +869,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                                   DateTime parsedDate =
                                       DateTime.parse(rawDateEnd);
                                   formattedDateEnd =
-                                      DateFormat('dd MMMM yyyy', 'id_ID')
+                                      DateFormat('dd MMM yyyy', 'id_ID')
                                           .format(parsedDate);
                                 } catch (e) {
                                   formattedDateEnd = rawDateEnd;
