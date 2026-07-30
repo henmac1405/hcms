@@ -68,7 +68,7 @@ class _LoginNewPageState extends State<LoginNewPage> {
   DatabaseHelper db = new DatabaseHelper();
   HelperFunction fh = new HelperFunction();
   final _usernameController = TextEditingController(text: '');
-  final _passwordController = TextEditingController(text: '08051992');
+  final _passwordController = TextEditingController(text: '05031976');
   // final _passwordController = TextEditingController(text: 'transsnow');
   final TextEditingController _NIKController = TextEditingController();
 
@@ -190,6 +190,8 @@ class _LoginNewPageState extends State<LoginNewPage> {
   int userlevel = 0;
   String image_idcard = "idcard_ts.png";
   String employeeeducation_name = "";
+  String idCard = "";
+  List<String> idCardArray = [];
 
   @override
   void initState() {
@@ -558,7 +560,25 @@ class _LoginNewPageState extends State<LoginNewPage> {
                           _navigateToHome(context, 4);
                         });
                       } else {
-                        employee();
+                        fh.Setting("ID_CARDTRK", apikey, token, "setting/show",
+                                url_api)
+                            .then((resultidcard) {
+                          if (resultidcard.isNotEmpty) {
+                            resultidcard.forEach((value) {
+                              idCard = value['setting_value2'] ?? "";
+                              idCardArray = idCard
+                                  .trim()
+                                  .split(',')
+                                  .map((id) => id.trim())
+                                  .toList();
+                              print(
+                                  "setting_value2 " + value['setting_value2']);
+                              print("idCard : ${idCardArray}");
+                            });
+                          }
+
+                          employee();
+                        });
                       }
                     } else {
                       setState(() {
@@ -860,9 +880,17 @@ class _LoginNewPageState extends State<LoginNewPage> {
             } else if (database_name == "transsnow") {
               image_idcard = "idcard_tsw.png";
             } else if (database_name == "transstudiomini") {
-              image_idcard = "idcard_tsm.png";
+              print("office_id " + office_id);
+              bool isFound = idCardArray.contains(office_id);
+              if (isFound) {
+                print('ID $office_id ditemukan di dalam daftar.');
+                image_idcard = "idcard_kc.png";
+              } else {
+                print('ID $office_id tidak terdaftar.');
+                image_idcard = "idcard_tsm.png";
+              }
             } else {
-              image_idcard = "idcard_kc.png";
+              image_idcard = "idcard_te.png";
             }
             print("image_idcard : " + image_idcard);
             // setIntoUserSession().then((hasils) {

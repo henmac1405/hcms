@@ -295,6 +295,8 @@ class _CutiPageState extends State<CutiPage> {
     setState(() {
       isLoading = true;
     });
+    int iDateFrom = 0;
+    int iDateTo = 0;
     DateTime now = DateTime.now();
     try {
       // Buat variabel DateTime temporary untuk kalkulasi leave_qty
@@ -307,9 +309,11 @@ class _CutiPageState extends State<CutiPage> {
         DateTime parsedDateFrom = DateFormat('dd-MM-yyyy').parse(tanggalAsal);
         date_from = DateFormat('yyyy-MM-dd').format(parsedDateFrom);
         calculationDateFrom = parsedDateFrom; // Simpan objek DateTime
+        iDateFrom = calculationDateFrom.millisecondsSinceEpoch;
       } else {
         date_from = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
         calculationDateFrom = now; // Fallback ke DateTime hari ini
+        iDateFrom = 0;
       }
 
       // 2. Validasi & Parse Tanggal Akhir
@@ -318,15 +322,24 @@ class _CutiPageState extends State<CutiPage> {
         DateTime parsedDateTo = DateFormat('dd-MM-yyyy').parse(tanggalAkhir);
         date_to = DateFormat('yyyy-MM-dd').format(parsedDateTo);
         calculationDateTo = parsedDateTo; // Simpan objek DateTime
+        iDateTo = calculationDateTo.millisecondsSinceEpoch;
       } else {
         date_to = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
         calculationDateTo = now; // Fallback ke DateTime hari ini
+        iDateTo = 0;
       }
 
       // 3. Hitung selisih hari menggunakan objek DateTime
       // Catatan: Ditambah 1 jika tanggal akhir juga dihitung sebagai hari cuti (inklusif)
       leave_qty = calculationDateTo.difference(calculationDateFrom).inDays + 1;
 
+      if (iDateFrom > iDateTo) {
+        _showDialog("Tanggal awal tidak boleh melebihi tanggal akhir!");
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
       // Jika Anda ingin mengupdate UI, pastikan panggil setState(() {}); jika variabel di atas adalah State
     } catch (e) {
       debugPrint("Gagal memproses tanggal: $e");
@@ -341,6 +354,7 @@ class _CutiPageState extends State<CutiPage> {
       jatah_cuti = _selectedJatahCuti;
       sisa_cuti = _selectedJatahCuti;
     }
+
     fh
         .cuti_insert(
             UserSession.database_name,
@@ -362,7 +376,7 @@ class _CutiPageState extends State<CutiPage> {
             "cuti/insertcuti",
             UserSession.url_api)
         .then((hasils) {
-      if (hasils == "sukses") {
+      if (hasils.substring(0, 6) == "sukses") {
         // _absen_history();
 
         setState(() {
@@ -372,7 +386,7 @@ class _CutiPageState extends State<CutiPage> {
         _tanggalakhirController.text = _getFormattedTodayStatic();
         _subjekController.text = "";
         cuti_history();
-        _showDialog("Pengajuan Cuti Berhasil");
+        _showDialog(hasils.replaceAll("sukses_", ""));
       } else {
         setState(() {
           isLoading = false;

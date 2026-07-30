@@ -1391,7 +1391,7 @@ class HelperFunction {
             .body); // Hanya decode jika sukses atau format JSON pasti valid
         data = json['data'];
         _toastInfo(json['message']);
-        strcode = "sukses";
+        strcode = "sukses_" + json['message'];
       }
       // 2. DETEKSI ERROR 404 DENGAN AMAN
       else if (response.statusCode == 404) {
@@ -1402,6 +1402,7 @@ class HelperFunction {
           strcode = json['message'] ?? 'Halaman atau API tidak ditemukan';
         } catch (_) {
           _toastInfo('Error 404: Endpoint API tidak ditemukan di server.');
+          strcode = 'Error 404: Endpoint API tidak ditemukan di server.';
         }
       }
       // 3. PENANGANAN ERROR LAINNYA
@@ -1421,119 +1422,18 @@ class HelperFunction {
       }
     } on SocketException catch (e) {
       print(e);
+      strcode = "Error " + api_name + ' ' + e.toString();
       _toastInfo(api_name + ' ' + e.toString());
       db.saveError(
           Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
     } catch (e) {
       print(e);
+      strcode = "Error " + api_name + ' ' + e.toString();
       _toastInfo(api_name + ' ' + e.toString());
       db.saveError(
           Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
     }
 
-    return strcode;
-  }
-
-  Future<String> requestabsen_insert_(
-      File imageFile,
-      String database_name,
-      String employee_personalid,
-      String requestabsence_subject,
-      String requestabsence_datestart,
-      String requestabsence_dateend,
-      String requestabsence_createlat,
-      String requestabsence_createlon,
-      String created_by,
-      String requestabsence_file,
-      String apikey,
-      String token,
-      String api_name,
-      String url_api) async {
-    List? data;
-
-    String strcode = "";
-    DateTime now = DateTime.now();
-    Duration timeZoneOffset = now.timeZoneOffset;
-    int offsetInHours = timeZoneOffset.inHours;
-    int offsetInMinutes = timeZoneOffset.inMinutes;
-    String formattedOffset = '';
-    if (timeZoneOffset.isNegative) {
-      formattedOffset += '-';
-    } else {
-      formattedOffset += '+';
-    }
-    formattedOffset +=
-        '${timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:';
-    formattedOffset +=
-        '${(timeZoneOffset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
-    String strTIMESTAMP = dailyFormat.format(now) +
-        "T" +
-        hourFormat.format(now) +
-        formattedOffset;
-    String username = 'admin';
-    String password = '1234';
-    String basicAuth =
-        'Basic ' + base64Encode(utf8.encode('$username:$password'));
-    Map<String, String> headers = {
-      "APIKEY": apikey,
-      "TIMESTAMP": strTIMESTAMP,
-      "TOKEN": token,
-      'authorization': basicAuth
-    };
-
-    Map<String, dynamic> params = {
-      "database_name": database_name,
-      "requestabsence_subject": requestabsence_subject,
-      "requestabsence_datestart": requestabsence_datestart,
-      "requestabsence_dateend": requestabsence_dateend,
-      "requestabsence_file": requestabsence_file,
-      "requestabsence_createlat": requestabsence_createlat,
-      "requestabsence_createlon": requestabsence_createlon,
-      "created_by": created_by,
-    };
-    print(apikey);
-    print(token);
-    print(api_name);
-    print(url_api);
-    print(headers);
-    print(params);
-    try {
-      final http.Response response = await http.post(
-        Uri.parse(url_api + api_name),
-        headers: headers,
-        body: params,
-      );
-      print('response  : ' + api_name + ' ' + response.statusCode.toString());
-      print(response.body);
-      // if (response.body.length > 0) {}
-      // print('1');
-      var json = jsonDecode(response.body);
-      // print('2');
-      if (response.statusCode == 200) {
-        // print('3');
-        // print('json');
-        // print(json['data']);
-        // data = json['data'];
-        strcode = "sukses";
-      } else {
-        strcode = json['message'];
-        db.saveError(Error(
-            api_name + " " + strcode + " " + employee_personalid + " ",
-            "",
-            DateTime.now().toString()));
-        _toastInfo(json['message']);
-      }
-    } on SocketException catch (e) {
-      print(e);
-      _toastInfo(api_name + ' ' + e.toString());
-      // db.saveError(
-      //     Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
-    } catch (e) {
-      print(e);
-      _toastInfo(api_name + ' ' + e.toString());
-      // db.saveError(
-      //     Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
-    }
     return strcode;
   }
 
@@ -1620,28 +1520,48 @@ class HelperFunction {
       print(response.body);
       // if (response.body.length > 0) {}
       // print('1');
-      var json = jsonDecode(response.body);
-      // print('2');
       if (response.statusCode == 200) {
-        // print('3');
-        // print('json');
-        // print(json['data']);
-        // data = json['data'];
-        strcode = "sukses";
-      } else {
-        strcode = json['message'];
-        db.saveError(Error(
-            api_name + " " + strcode + " " + employee_personalid + " ",
-            "",
-            DateTime.now().toString()));
+        var json = jsonDecode(response
+            .body); // Hanya decode jika sukses atau format JSON pasti valid
+        data = json['data'];
         _toastInfo(json['message']);
+        strcode = "sukses_" + json['message'];
+      }
+      // 2. DETEKSI ERROR 404 DENGAN AMAN
+      else if (response.statusCode == 404) {
+        // Amankan pembacaan pesan dari JSON, gunakan fallback jika bukan JSON
+        try {
+          var json = jsonDecode(response.body);
+          _toastInfo(json['message'] ?? 'Halaman atau API tidak ditemukan');
+          strcode = json['message'] ?? 'Halaman atau API tidak ditemukan';
+        } catch (_) {
+          _toastInfo('Error 404: Endpoint API tidak ditemukan di server.');
+          strcode = 'Error 404: Endpoint API tidak ditemukan di server.';
+        }
+      }
+      // 3. PENANGANAN ERROR LAINNYA
+      else {
+        try {
+          var json = jsonDecode(response.body);
+          strcode = response.statusCode.toString() +
+              " : " +
+              (json['message'] ?? 'Error');
+          _toastInfo(response.statusCode.toString() +
+              " : " +
+              (json['message'] ?? 'Error'));
+        } catch (_) {
+          strcode = 'Error ${response.statusCode}: Terjadi kesalahan server.';
+          _toastInfo('Error ${response.statusCode}: Terjadi kesalahan server.');
+        }
       }
     } on SocketException catch (e) {
+      strcode = "Error " + api_name + ' ' + e.toString();
       print(e);
       _toastInfo(api_name + ' ' + e.toString());
       // db.saveError(
       //     Error(api_name + " " + e.toString(), "", DateTime.now().toString()));
     } catch (e) {
+      strcode = "Error " + api_name + ' ' + e.toString();
       print(e);
       _toastInfo(api_name + ' ' + e.toString());
       // db.saveError(

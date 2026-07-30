@@ -291,11 +291,7 @@ class _SakitPageState extends State<SakitPage> {
       });
 
       //insert data absen
-      if (UserSession.debug == "on") {
-        insertdata(imageFile);
-      } else {
-        _showDialog("Data Production...!!!!");
-      }
+      insertdata(imageFile);
     }).catchError((e) {
       print(e);
       print('error : _getAddressFromLatLng');
@@ -308,12 +304,15 @@ class _SakitPageState extends State<SakitPage> {
   void insertdata(File imageFile) {
     print("insertdata");
     DateTime now = DateTime.now();
+    int iDateFrom = 0;
+    int iDateTo = 0;
     try {
       // 1. Validasi & Parse Tanggal Awal
       if (_tanggalawalController.text.isNotEmpty) {
         String tanggalAsal = _tanggalawalController.text;
         DateTime parsedDateFrom = DateFormat('dd-MM-yyyy').parse(tanggalAsal);
         date_from = DateFormat('yyyy-MM-dd').format(parsedDateFrom);
+        iDateFrom = parsedDateFrom.millisecondsSinceEpoch;
       } else {
         // Jika kosong, berikan fallback tanggal hari ini atau string kosong
         date_from = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
@@ -324,9 +323,18 @@ class _SakitPageState extends State<SakitPage> {
         String tanggalAkhir = _tanggalakhirController.text;
         DateTime parsedDateTo = DateFormat('dd-MM-yyyy').parse(tanggalAkhir);
         date_to = DateFormat('yyyy-MM-dd').format(parsedDateTo);
+        iDateTo = parsedDateTo.millisecondsSinceEpoch;
       } else {
         // Jika kosong, berikan fallback tanggal hari ini atau string kosong
         date_to = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
+      }
+
+      if (iDateFrom > iDateTo) {
+        _showDialog("Tanggal awal tidak boleh melebihi tanggal akhir!");
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
     } catch (e) {
       // Menangkap error jika teks di dalam controller formatnya rusak (misal: "09-07-2026" bukan "2026-07-09")

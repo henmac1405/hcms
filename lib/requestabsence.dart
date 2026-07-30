@@ -212,12 +212,15 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
   void insertdata(File imageFile) {
     print("insertdata");
     DateTime now = DateTime.now();
+    int iDateFrom = 0;
+    int iDateTo = 0;
     try {
       // 1. Validasi & Parse Tanggal Awal
       if (_tanggalawalController.text.isNotEmpty) {
         String tanggalAsal = _tanggalawalController.text;
         DateTime parsedDateFrom = DateFormat('dd-MM-yyyy').parse(tanggalAsal);
         date_from = DateFormat('yyyy-MM-dd').format(parsedDateFrom);
+        iDateFrom = parsedDateFrom.millisecondsSinceEpoch;
       } else {
         // Jika kosong, berikan fallback tanggal hari ini atau string kosong
         date_from = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
@@ -228,9 +231,18 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
         String tanggalAkhir = _tanggalakhirController.text;
         DateTime parsedDateTo = DateFormat('dd-MM-yyyy').parse(tanggalAkhir);
         date_to = DateFormat('yyyy-MM-dd').format(parsedDateTo);
+        iDateTo = parsedDateTo.millisecondsSinceEpoch;
       } else {
         // Jika kosong, berikan fallback tanggal hari ini atau string kosong
         date_to = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
+      }
+
+      if (iDateFrom > iDateTo) {
+        _showDialog("Tanggal awal tidak boleh melebihi tanggal akhir!");
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
     } catch (e) {
       // Menangkap error jika teks di dalam controller formatnya rusak (misal: "09-07-2026" bukan "2026-07-09")
@@ -275,15 +287,8 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
         isLoading = false;
         strError = hasils;
       });
-      if (hasils == "sukses") {
+      if (hasils.substring(0, 6) == "sukses") {
         _absen_history();
-        // fh
-        //     .uploadimageabsen(
-        //         imageFile, uploadimage_name, "uploadgambar/upload")
-        //     .then((hasilfoto) {
-        //   print("hasilfoto : " + hasilfoto);
-
-        //   if (hasilfoto == "sukses") {
         setState(() {
           _dokumenPendukung = null;
           _tanggalawalController.text = _getFormattedTodayStatic();
@@ -291,7 +296,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
           _subjekController.text = "";
           noimagename = "";
         });
-        _showDialog("Pengajuan Absensi Sudah Terkirim");
+        _showDialog(hasils.replaceAll("sukses_", ""));
         //   }
         // });
       } else {
@@ -575,13 +580,13 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const SizedBox(height: 16),
-                        _buildFormLabel('Nomor Kontak'),
-                        _buildInputField(
-                          controller: _nomorKontakController,
-                          hintText: 'Masukkan nomor kontak aktif',
-                          keyboardType: TextInputType.phone,
-                        ),
+                        // const SizedBox(height: 16),
+                        // _buildFormLabel('Nomor Kontak'),
+                        // _buildInputField(
+                        //   controller: _nomorKontakController,
+                        //   hintText: 'Masukkan nomor kontak aktif',
+                        //   keyboardType: TextInputType.phone,
+                        // ),
                         // const SizedBox(height: 16),
                         // // Input Nomor Kontak (Tambahan Baru Sesuai Gambar)
                         // _buildFormLabel('Alamat Kontak'),
@@ -756,21 +761,9 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                         // print(tanggalHasil);
                         if (_subjekController.text == "") {
                           _showDialog("Subjek Pengajuan Belum Diisi");
-                        } else if (_dokumenPendukung != null) {
-                          setState(() {
-                            isLoading = true;
-                          });
-
-                          File? compressedFile =
-                              await _compressImage(_dokumenPendukung!);
-                          _getCurrentLocation(compressedFile!);
                         } else {
-                          setState(() {
-                            isLoading = true;
-                          });
-                          File? noimageFile = await noimage();
-                          _getCurrentLocation(noimageFile!);
-                          // _showDialog("Dokumen Pendukung belum dipilih");
+                          _showDialogReq(
+                              "Anda mengajukan Absensi mulai tanggal ${_tanggalawalController.text} s/d ${_tanggalakhirController.text}, \n\n Apakah pengajuan anda sudah benar?");
                         }
                       },
                       icon: const Icon(Icons.check_circle,
@@ -1299,6 +1292,60 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
               Navigator.pop(context);
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  _showDialogReq(String keterangan) async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: Text(
+                keterangan,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: new Text("CANCEL"),
+          )),
+          Container(
+              child: ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              if (_dokumenPendukung != null) {
+                setState(() {
+                  isLoading = true;
+                });
+
+                File? compressedFile = await _compressImage(_dokumenPendukung!);
+                _getCurrentLocation(compressedFile!);
+              } else {
+                setState(() {
+                  isLoading = true;
+                });
+                File? noimageFile = await noimage();
+                _getCurrentLocation(noimageFile!);
+                // _showDialog("Dokumen Pendukung belum dipilih");
+              }
+            },
+            child: new Text("OK"),
+          )),
         ],
       ),
     );
