@@ -234,10 +234,10 @@ class _FaceDetectorCameraScreenState extends State<FaceDetectorCameraScreen> {
         UserSession.employee_id + "_" + imageFormat.format(now) + ".jpg";
     uploadimage_name = UserSession.employee_id + "_" + imageFormat.format(now);
     absence_dateend = absence_date;
-    // if (widget.type == "outyesterday") {
-    //   absence_date = widget.date_yesterday;
-    //   absence_time = "23:59:59";
-    // }
+    if (widget.type == "outyesterday") {
+      absence_date = widget.date_yesterday;
+      // absence_time = "23:59:59";
+    }
     fh
         .absenceonline_insert_new(
             watermarkedFile,

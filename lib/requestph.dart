@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app_colors.dart';
@@ -12,16 +13,15 @@ import 'user_session.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hcms/database/function_helper.dart';
 import 'package:intl/intl.dart';
-import 'package:image_picker/image_picker.dart';
 
-class PenggantiHariPage extends StatefulWidget {
+class RequestPHPage extends StatefulWidget {
   final List<dynamic> HistoryData;
   final List<dynamic> HistoryDataApproval;
   final ValueChanged<List<dynamic>> DataHistory;
   final ValueChanged<List<dynamic>> DataApprovalHistory;
   final ValueChanged<int> onIndexChanged;
   final ValueChanged<String> imageurl;
-  const PenggantiHariPage({
+  const RequestPHPage({
     super.key,
     required this.HistoryData,
     required this.HistoryDataApproval,
@@ -32,11 +32,11 @@ class PenggantiHariPage extends StatefulWidget {
   });
 
   @override
-  State<PenggantiHariPage> createState() => _PenggantiHariPageState();
+  State<RequestPHPage> createState() => _RequestPHPageState();
 }
 
-class _PenggantiHariPageState extends State<PenggantiHariPage> {
-  // Controller untuk menangani input teks dinamis formulir
+class _RequestPHPageState extends State<RequestPHPage> {
+  // Controller untuk menangani isi teks dinamis formulir
   final _subjekController = TextEditingController(text: '');
   final _tanggalawalController =
       TextEditingController(text: _getFormattedTodayStatic());
@@ -53,6 +53,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
     return "$day-$month-${now.year}";
   }
 
+  // Variabel untuk menyimpan file dokumen yang diunggah
   File? _dokumenPendukung;
   // File? _suratKeterangan;
   // File? _lampiranLain;
@@ -69,13 +70,21 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
   String uploadimage_name = "";
   String file_image_name = "";
   bool isLoading = false;
-  int sisa_ph = 0;
 
   List<dynamic> dataabsen = [];
   List<dynamic> dataabsenapproval = [];
-  List<dynamic> phbalance = [];
+  List<dynamic> dataabsenforph = [];
 
+  String _selectedJenisIzinID = "Personal";
+  String _selectedJenisIzinName = "Personal";
+  String strError = "";
   String noimagename = "";
+
+  String selectedDate = '';
+  String tgldiajukan = "";
+  String tglkadaluarsa = "";
+
+  // Data list tanggal sesuai gambar referensi
 
   // Fungsi inti untuk memicu pengambilan gambar berdasarkan sumber yang dipilih
   Future<void> _pickDocument(ImageSource source, String type) async {
@@ -108,9 +117,10 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
     // if (widget.HistoryData.isEmpty) {
     _absen_history();
     _absenapproval_history();
-    _saldo_ph();
+    _showabsen_forPH();
     // } else {
     //   dataabsen = widget.HistoryData;
+    //   dataabsenapproval = widget.HistoryDataApproval;
     // }
   }
 
@@ -129,17 +139,18 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
       isLoading = true;
     });
     fh
-        .ph_history(
+        .requestabsen_history(
             UserSession.database_name,
             UserSession.employee_personalid,
             UserSession.apikey,
             UserSession.token,
-            "ph/showph",
+            "ph/showphbalance",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
         isLoading = false;
       });
+      print("_absen_history : ");
       print(hasils);
       if (hasils.length > 0) {
         setState(() {
@@ -154,17 +165,18 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
       isLoading = true;
     });
     fh
-        .ph_history(
+        .requestabsen_history(
             UserSession.database_name,
             UserSession.employee_personalid,
             UserSession.apikey,
             UserSession.token,
-            "ph/showphapproval",
+            "ph/showphbalanceapproval",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
         isLoading = false;
       });
+      print("_absenapproval_history : ");
       print(hasils);
       if (hasils.length > 0) {
         setState(() {
@@ -174,36 +186,34 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
     });
   }
 
-  void _saldo_ph() {
+  void _showabsen_forPH() {
     setState(() {
       isLoading = true;
     });
     fh
-        .ph_history(
+        .absenforPH_history(
             UserSession.database_name,
+            UserSession.employee_fingerid,
             UserSession.employee_personalid,
             UserSession.apikey,
             UserSession.token,
-            "ph/showphsaldo",
+            "absen/showabsenforph",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
         isLoading = false;
       });
-      phbalance = hasils;
-      print("phbalance : ");
+      print("_showabsen_forPH : ");
       print(hasils);
-      if (phbalance.length > 0) {
-        phbalance.forEach((rows) {
-          setState(() {
-            sisa_ph = rows['saldo'] ?? 0;
-          });
+      if (hasils.length > 0) {
+        setState(() {
+          dataabsenforph = hasils;
         });
       }
     });
   }
 
-  // Fungsi untuk memunculkan Date Picker Kalender
+  // Fungsi untuk memunculkan selektor kalender (Date Picker) bawaan
   Future<void> _selectDate(
       BuildContext context, TextEditingController controller) async {
     final DateTime? picked = await showDatePicker(
@@ -255,7 +265,11 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
       });
 
       //insert data absen
+      // if (UserSession.debug == "on") {
       insertdata(imageFile);
+      // } else {
+      //   _showDialog("Data Production...!!!!");
+      // }
     }).catchError((e) {
       print(e);
       print('error : _getAddressFromLatLng');
@@ -268,66 +282,60 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
   void insertdata(File imageFile) {
     print("insertdata");
     DateTime now = DateTime.now();
-    DateTime parsedDateFrom = DateTime.now();
-    DateTime parsedDateTo = DateTime.now();
     int iDateFrom = 0;
     int iDateTo = 0;
-    try {
-      // 1. Validasi & Parse Tanggal Awal
-      if (_tanggalawalController.text.isNotEmpty) {
-        String tanggalAsal = _tanggalawalController.text;
-        parsedDateFrom = DateFormat('dd-MM-yyyy').parse(tanggalAsal);
-        date_from = DateFormat('yyyy-MM-dd').format(parsedDateFrom);
-        iDateFrom = parsedDateFrom.millisecondsSinceEpoch;
-      } else {
-        // Jika kosong, berikan fallback tanggal hari ini atau string kosong
-        date_from = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
-      }
+    // try {
+    //   // 1. Validasi & Parse Tanggal Awal
+    //   if (_tanggalawalController.text.isNotEmpty) {
+    //     String tanggalAsal = _tanggalawalController.text;
+    //     DateTime parsedDateFrom = DateFormat('dd-MM-yyyy').parse(tanggalAsal);
+    //     date_from = DateFormat('yyyy-MM-dd').format(parsedDateFrom);
+    //     iDateFrom = parsedDateFrom.millisecondsSinceEpoch;
+    //   } else {
+    //     // Jika kosong, berikan fallback tanggal hari ini atau string kosong
+    //     date_from = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
+    //   }
 
-      // 2. Validasi & Parse Tanggal Akhir (Pastikan menggunakan controller tanggal akhir!)
-      if (_tanggalakhirController.text.isNotEmpty) {
-        String tanggalAkhir = _tanggalakhirController.text;
-        parsedDateTo = DateFormat('dd-MM-yyyy').parse(tanggalAkhir);
-        date_to = DateFormat('yyyy-MM-dd').format(parsedDateTo);
-        iDateTo = parsedDateTo.millisecondsSinceEpoch;
-      } else {
-        // Jika kosong, berikan fallback tanggal hari ini atau string kosong
-        date_to = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
-      }
+    //   // 2. Validasi & Parse Tanggal Akhir (Pastikan menggunakan controller tanggal akhir!)
+    //   if (_tanggalakhirController.text.isNotEmpty) {
+    //     String tanggalAkhir = _tanggalakhirController.text;
+    //     DateTime parsedDateTo = DateFormat('dd-MM-yyyy').parse(tanggalAkhir);
+    //     date_to = DateFormat('yyyy-MM-dd').format(parsedDateTo);
+    //     iDateTo = parsedDateTo.millisecondsSinceEpoch;
+    //   } else {
+    //     // Jika kosong, berikan fallback tanggal hari ini atau string kosong
+    //     date_to = DateFormat('yyyy-MM-dd', 'id_ID').format(now);
+    //   }
 
-      if (iDateFrom > iDateTo) {
-        _showDialog("Tanggal awal tidak boleh melebihi tanggal akhir!");
-        setState(() {
-          isLoading = false;
-        });
-        return;
-      }
-      Duration difference = parsedDateTo.difference(parsedDateFrom);
-      int jmlHari = difference.inDays;
-      if (jmlHari > sisa_ph) {
-        _showDialog("Saldo PH kurang");
-        setState(() {
-          isLoading = false;
-        });
-        return;
-      }
-    } catch (e) {
-      // Menangkap error jika teks di dalam controller formatnya rusak (misal: "09-07-2026" bukan "2026-07-09")
-      debugPrint("Gagal memproses tanggal: $e");
+    //   if (iDateFrom > iDateTo) {
+    //     _showDialog("Tanggal awal tidak boleh melebihi tanggal akhir!");
+    //     setState(() {
+    //       isLoading = false;
+    //     });
+    //     return;
+    //   }
+    // } catch (e) {
+    //   // Menangkap error jika teks di dalam controller formatnya rusak (misal: "09-07-2026" bukan "2026-07-09")
+    //   debugPrint("Gagal memproses tanggal: $e");
 
-      // Tampilkan pesan peringatan ke user jika diperlukan
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Format tanggal salah atau belum dipilih!')),
-      );
+    //   // Tampilkan pesan peringatan ke user jika diperlukan
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //         content: Text('Format tanggal salah atau belum dipilih!')),
+    //   );
+    // }
+    if (noimagename == "noimage") {
+      file_image_name = "noimage.jpg";
+      uploadimage_name = "noimage";
+    } else {
+      file_image_name =
+          UserSession.employee_id + "_" + imageFormat.format(now) + ".jpg";
+      uploadimage_name =
+          UserSession.employee_id + "_" + imageFormat.format(now);
     }
-
-    file_image_name =
-        UserSession.employee_id + "_" + imageFormat.format(now) + ".jpg";
-    uploadimage_name = UserSession.employee_id + "_" + imageFormat.format(now);
     print("insertdata2");
     fh
-        .ph_insert(
+        .requestph_insert(
             imageFile,
             UserSession.database_name,
             UserSession.employee_personalid,
@@ -340,30 +348,26 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
             uploadimage_name,
             UserSession.apikey,
             UserSession.token,
-            "ph/phinsert",
+            "ph/phbalanceinsert",
             UserSession.url_api)
         .then((hasils) async {
       setState(() {
         isLoading = false;
+        strError = hasils;
       });
       if (hasils.substring(0, 6) == "sukses") {
         _absen_history();
-        _absenapproval_history();
-        _saldo_ph();
-        // fh
-        //     .uploadimageabsen(
-        //         imageFile, uploadimage_name, "uploadgambar/upload")
-        //     .then((hasilfoto) {
-        //   print("hasilfoto : " + hasilfoto);
-
-        //   if (hasilfoto == "sukses") {
         setState(() {
           _dokumenPendukung = null;
           _tanggalawalController.text = _getFormattedTodayStatic();
           _tanggalakhirController.text = _getFormattedTodayStatic();
           _subjekController.text = "";
+          noimagename = "";
+          selectedDate = "";
+          tgldiajukan = "";
+          tglkadaluarsa = "";
         });
-        _showDialog("Data Berhasil Disimpan");
+        _showDialog(hasils.replaceAll("sukses_", ""));
         //   }
         // });
       } else {
@@ -393,99 +397,6 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
 
     if (result == null) return null;
     return File(result.path); // Mengembalikan objek File yang sudah dikompresi
-  }
-
-  _showDialog(String keterangan) async {
-    await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        contentPadding: EdgeInsets.all(16.0),
-        content: Row(
-          children: <Widget>[
-            Expanded(
-              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
-              child: Text(
-                keterangan,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16.0,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text(
-              "OK",
-              style: TextStyle(
-                color: Color.fromARGB(255, 2, 8, 134),
-                fontSize: 16.0,
-              ),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  _showDialogReq(String keterangan) async {
-    await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        contentPadding: EdgeInsets.all(16.0),
-        content: Row(
-          children: <Widget>[
-            Expanded(
-              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
-              child: Text(
-                keterangan,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16.0,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          Container(
-              child: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: new Text("CANCEL"),
-          )),
-          Container(
-              child: ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (_dokumenPendukung != null) {
-                setState(() {
-                  isLoading = true;
-                });
-
-                File? compressedFile = await _compressImage(_dokumenPendukung!);
-                // _getCurrentLocation(compressedFile!);
-                insertdata(compressedFile!);
-              } else {
-                setState(() {
-                  isLoading = true;
-                });
-                File? noimageFile = await noimage();
-                // _getCurrentLocation(noimageFile!);
-                insertdata(noimageFile!);
-                // _showDialog("Dokumen Pendukung belum dipilih");
-              }
-            },
-            child: new Text("OK"),
-          )),
-        ],
-      ),
-    );
   }
 
   Future<File?> noimage() async {
@@ -521,19 +432,30 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: const Color(0xFFF4F6FA),
-        // appBar: AppBar(
-        //   backgroundColor: AppColors.primary,
-        //   elevation: 0,
-        //   automaticallyImplyLeading: false,
-        //   centerTitle: true,
-        //   title: const Text(
-        //     'Pengganti Hari',
-        //     style: TextStyle(
-        //         color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-        //   ),
-        // ),
-        body: Column(children: [
+      backgroundColor:
+          const Color(0xFFF4F6FA), // Latar belakang abu-abu muda bersih
+
+      // ==================== APP BAR UTAMA ====================
+      // appBar: AppBar(
+      //   backgroundColor: AppColors.primary, // Navy (#001668)
+      //   elevation: 0,
+      //   automaticallyImplyLeading: false,
+      //   title: Row(
+      //     children: [
+      //       const Text(
+      //         'Pengajuan Izin',
+      //         style: TextStyle(
+      //           color: Colors.white,
+      //           fontWeight: FontWeight.bold,
+      //           fontSize: 20,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+
+      body: Column(
+        children: [
           // 1. Indikator Loading Bar (Hanya muncul jika isLoading bernilai true)
           if (isLoading == true)
             const LinearProgressIndicator(
@@ -562,7 +484,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                           .center, // Membuat teks berada di tengah horizontal
                       children: [
                         Text(
-                          'PENGGANTI HARI',
+                          'PANGAJUAN SALDO PH',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -646,24 +568,195 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                         const SizedBox(height: 16),
                         _buildReadOnlyField(
                             label: 'Kantor', value: UserSession.office_name),
-                        const SizedBox(height: 16),
-                        _buildReadOnlyField(
-                            label: 'Saldo PH', value: sisa_ph.toString()),
-                        const SizedBox(height: 16),
-                        // Field Saldo Ganti Hari (PH) dengan teks hijau tebal sesuai gambar Anda
-
-                        // _buildReadOnlyField(
-                        //   label: 'Saldo Ganti Hari (PH)',
-                        //   value: '3 hari',
-                        //   textColor:
-                        //       const Color(0xFF2ECC71), // Hijau tebal kontras
-                        // ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // ==================== CARD 2: PILIH TANGGAL ====================
+                  Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha((0.02 * 255).round()),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. JUDUL UTAMA
+                            const Row(
+                              children: [
+                                Icon(Icons.history_toggle_off_rounded,
+                                    color: Colors.orange, size: 20),
+                                SizedBox(width: 8.0),
+                                Text(
+                                  'Pilih Tanggal Absen',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F1E4A), // Biru gelap navy
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12.0),
 
-                  // ==================== CARD 2: DETAIL PENGAJUAN (DIPERBARUI) ====================
+                            // 2. KOTAK INFORMASI / PETUNJUK (BANNER BIRU MUDA)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12.0),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9), // Latar banner
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              child: const Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info,
+                                      color: Color(0xFF0F1E4A), size: 16),
+                                  SizedBox(width: 8.0),
+                                  Expanded(
+                                    child: Text(
+                                      'Pilih salah satu tanggal absensi yang ingin Anda ajukan sebagai saldo Pengganti Hari (PH).',
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        color: Colors.grey,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16.0),
+
+                            // 3. GRID TOMBOL TANGGAL
+                            GridView.builder(
+                                shrinkWrap:
+                                    true, // Agar GridView menyesuaikan tinggi total item di dalamnya
+                                physics:
+                                    const NeverScrollableScrollPhysics(), // Mematikan scroll internal GridView
+                                itemCount: dataabsenforph
+                                    .length, // Menggunakan jumlah data dari array API/State
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount:
+                                      3, // Membagi menjadi 3 kolom horizontal
+                                  crossAxisSpacing:
+                                      10.0, // Jarak horizontal antar item
+                                  mainAxisSpacing:
+                                      12.0, // Jarak vertikal antar item
+                                  childAspectRatio:
+                                      2.4, // Rasio lebar dibanding tinggi tombol tanggal
+                                ),
+                                itemBuilder: (context, index) {
+                                  final item = dataabsenforph[index];
+                                  final rawDate =
+                                      item['absence_date']?.toString() ?? '';
+
+                                  String dateText = '-';
+                                  DateTime?
+                                      parsedDate; // <--- Objek DateTime yang valid dari API
+
+                                  if (rawDate.isNotEmpty && rawDate != '-') {
+                                    try {
+                                      // Di sini aman karena rawDate isinya format ISO API (contoh: 2025-09-08)
+                                      parsedDate = DateTime.parse(rawDate);
+
+                                      // Mengubah ke teks singkatan untuk tampilan tombol di GridView
+                                      dateText = DateFormat('dd MMM yyyy', 'id')
+                                          .format(parsedDate);
+                                    } catch (e) {
+                                      dateText = rawDate;
+                                    }
+                                  }
+
+                                  final isSelected = dateText == selectedDate;
+
+                                  return InkWell(
+                                    onTap: () {
+                                      // PENTING: Deklarasikan parsedDateNew di sini jika Anda wajib menggunakannya
+                                      DateTime? parsedDateNew;
+
+                                      setState(() {
+                                        selectedDate = dateText;
+
+                                        // ❌ JANGAN TULIS: parsedDateNew = DateTime.parse(selectedDate); -> INI YANG BIKIN ERROR
+
+                                        //  SOLUSI BENAR: Salin langsung dari parsedDate yang ada di atas
+                                        parsedDateNew = parsedDate;
+
+                                        if (parsedDateNew != null) {
+                                          // Format objek DateTime menjadi bulan penuh (08 September 2025)
+                                          tgldiajukan =
+                                              DateFormat('dd MMMM yyyy', 'id')
+                                                  .format(parsedDateNew!);
+                                          date_from =
+                                              DateFormat('yyyy-MM-dd', 'id')
+                                                  .format(parsedDateNew!);
+                                          DateTime calculatedExpiry = DateTime(
+                                            parsedDateNew!.year,
+                                            parsedDateNew!.month +
+                                                3, // Tambah 3 bulan
+                                            parsedDateNew!.day -
+                                                1, // Kurangi 1 hari
+                                          );
+
+                                          // 3. Format hasil akhir tglkadaluarsa sesuai keinginan (misal: dd MMMM yyyy)
+                                          tglkadaluarsa =
+                                              DateFormat('dd MMMM yyyy', 'id')
+                                                  .format(calculatedExpiry);
+                                          date_to =
+                                              DateFormat('yyyy-MM-dd', 'id')
+                                                  .format(calculatedExpiry);
+                                        } else {
+                                          tgldiajukan = dateText;
+                                          tglkadaluarsa = dateText;
+                                          date_from = "";
+                                          date_to = "";
+                                        }
+                                      });
+                                    },
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF001B69)
+                                            : Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(12.0),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Colors.transparent
+                                              : Colors.grey.shade200,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        dateText, // Menampilkan format "08 Sep 2025"
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12.0,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                })
+                          ])),
+
+                  const SizedBox(height: 16),
+                  // ==================== CARD 2: DETAIL PENGAJUAN IZIN (EDITABLE) ====================
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -681,158 +774,94 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Section Detail Pengajuan
-                        const Row(
+                        // Header Section Detail Pengajuan Izin
+                        Row(
                           children: [
-                            Icon(Icons.calendar_month,
-                                color: AppColors.accent, size: 20),
-                            SizedBox(width: 10),
-                            Text(
-                              'Detail Pengajuan',
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent, // Orange
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.dns_rounded,
+                                  color: Colors.white, size: 11),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Detail Pengajuan Saldo PH',
                               style: TextStyle(
-                                  color: Color(0xFF0F1E4A),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
+                                color: Color(0xFF0F1E4A),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 24),
 
-                        // 1. Subjek
-                        _buildFormLabel('Subjek'),
+                        // Input Tanggal Izin (Kalender Terintegrasi)
+                        _buildReadOnlyField(
+                            label: 'Tanggal Yang diajukan', value: tgldiajukan),
+
+                        const SizedBox(height: 16),
+
+                        _buildReadOnlyField(
+                            label: 'Tanggal Kadaluarsa (Otomatis)',
+                            value: tglkadaluarsa),
+                        const SizedBox(height: 16),
+// Input Subjek
+                        _buildFormLabel('Keterangan (Optional)'),
                         _buildTextAreaField(
-                            controller: _subjekController,
-                            hintText: 'Masukkan subjek pengajuan',
-                            maxLines: 2),
-
-                        const SizedBox(height: 16),
-
-                        // 2. Tanggal Pengganti (Kalender)
-                        _buildFormLabel('Tanggal Awal'),
-                        GestureDetector(
-                          onTap: () =>
-                              _selectDate(context, _tanggalawalController),
-                          child: AbsorbPointer(
-                            child: _buildDropdownInputField(
-                                controller: _tanggalawalController,
-                                hintText: 'Pilih tanggal awal'),
-                          ),
+                          controller: _subjekController,
+                          hintText: 'Masukkan keterangan',
                         ),
-                        const SizedBox(height: 16),
 
-                        // 2. Tanggal Pengganti (akhir)
-                        _buildFormLabel('Tanggal Akhir'),
-                        GestureDetector(
-                          onTap: () =>
-                              _selectDate(context, _tanggalakhirController),
-                          child: AbsorbPointer(
-                            child: _buildDropdownInputField(
-                                controller: _tanggalakhirController,
-                                hintText: 'Pilih tanggal akhir'),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 3. Nomor Kontak
-                        _buildFormLabel('Nomor Kontak'),
-                        _buildInputField(
-                          controller: _nomorKontakController,
-                          hintText: 'Masukkan nomor kontak aktif',
-                          keyboardType: TextInputType.phone,
-                        ),
+                        // _buildFormLabel('Tanggal Yang diajukan'),
+                        // GestureDetector(
+                        //   onTap: () =>
+                        //       _selectDate(context, _tanggalawalController),
+                        //   child: AbsorbPointer(
+                        //     child: _buildDropdownInputField(
+                        //       controller: _tanggalawalController,
+                        //       hintText: 'Tanggal Yang diajukan',
+                        //     ),
+                        //   ),
+                        // ),
                         // const SizedBox(height: 16),
-                        // // 3. Alamat Kontak
+                        // // Input Tanggal Izin (Kalender Terintegrasi)
+                        // _buildFormLabel('Tanggal Kadaluarsa (Otomatis)'),
+                        // GestureDetector(
+                        //   onTap: () =>
+                        //       _selectDate(context, _tanggalakhirController),
+                        //   child: AbsorbPointer(
+                        //     child: _buildDropdownInputField(
+                        //       controller: _tanggalakhirController,
+                        //       hintText: 'Tanggal Kadaluarsa',
+                        //     ),
+                        //   ),
+                        // ),
+                        const SizedBox(height: 16),
+                        // const SizedBox(height: 16),
+                        // _buildFormLabel('Nomor Kontak'),
+                        // _buildInputField(
+                        //   controller: _nomorKontakController,
+                        //   hintText: 'Masukkan nomor kontak aktif',
+                        //   keyboardType: TextInputType.phone,
+                        // ),
+                        // const SizedBox(height: 16),
+                        // // Input Nomor Kontak (Tambahan Baru Sesuai Gambar)
                         // _buildFormLabel('Alamat Kontak'),
                         // _buildTextAreaField(
                         //     controller: _alamatKontakController,
                         //     hintText: 'Masukkan Alamat kontak aktif',
-                        //     maxLines: 2
-                        //     // keyboardType: TextInputType.phone,
-                        //     ),
+                        //     maxLines: 2),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // ==================== CARD 3: DOKUMEN PENDUKUNG ====================
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha((0.02 * 255).round()),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Icon(Icons.description,
-                                color: AppColors.accent, size: 20),
-                            SizedBox(width: 10),
-                            Text(
-                              'Dokumen Pendukung',
-                              style: TextStyle(
-                                  color: Color(0xFF0F1E4A),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            // const SizedBox(width: 6),
-                            // Text(
-                            //   '(opsional)',
-                            //   style: TextStyle(
-                            //       color: Colors.grey.shade400,
-                            //       fontSize: 14,
-                            //       fontWeight: FontWeight.w500),
-                            // ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // 1. Unggah Dokumen Pendukung
-                        _buildUploadBox(
-                          label: _dokumenPendukung != null
-                              ? 'Berhasil Diunggah (Ketuk untuk ubah)'
-                              : 'Unggah Dokumen Pendukung',
-                          isUploaded: _dokumenPendukung != null,
-                          onTap: () =>
-                              _showSourceSelectionPopup(context, 'pendukung'),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // // 2. Unggah Surat Keterangan
-                        // _buildUploadBox(
-                        //   label: _suratKeterangan != null
-                        //       ? 'Berhasil Diunggah (Ketuk untuk ubah)'
-                        //       : 'Unggah Surat Keterangan',
-                        //   isUploaded: _suratKeterangan != null,
-                        //   onTap: () =>
-                        //       _showSourceSelectionPopup(context, 'keterangan'),
-                        // ),
-                        // const SizedBox(height: 16),
-
-                        // // 3. Unggah Lampiran Lain
-                        // _buildUploadBox(
-                        //   label: _lampiranLain != null
-                        //       ? 'Berhasil Diunggah (Ketuk untuk ubah)'
-                        //       : 'Unggah Lampiran Lain',
-                        //   isUploaded: _lampiranLain != null,
-                        //   onTap: () => _showSourceSelectionPopup(context, 'lain'),
-                        // ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ==================== CARD 3: ALUR PERSETUJUAN (BARU) ====================
                   // Container(
                   //   width: double.infinity,
                   //   padding: const EdgeInsets.all(20),
@@ -850,13 +879,79 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                   //   child: Column(
                   //     crossAxisAlignment: CrossAxisAlignment.start,
                   //     children: [
-                  //       // Header Section Alur Persetujuan
                   //       Row(
+                  //         crossAxisAlignment: CrossAxisAlignment.end,
                   //         children: [
-                  //           const Icon(Icons.check_circle_rounded,
+                  //           const Icon(Icons.description,
                   //               color: AppColors.accent, size: 20),
                   //           const SizedBox(width: 10),
                   //           const Text(
+                  //             'Dokumen Pendukung',
+                  //             style: TextStyle(
+                  //                 color: Color(0xFF0F1E4A),
+                  //                 fontSize: 18,
+                  //                 fontWeight: FontWeight.bold),
+                  //           ),
+                  //           const SizedBox(width: 6),
+                  //           Text(
+                  //             '(opsional)',
+                  //             style: TextStyle(
+                  //                 color: Colors.grey.shade400,
+                  //                 fontSize: 14,
+                  //                 fontWeight: FontWeight.w500),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       const SizedBox(height: 24),
+
+                  //       // 1. Unggah Dokumen Pendukung
+                  //       _buildUploadBox(
+                  //         label: _dokumenPendukung != null
+                  //             ? 'Berhasil Diunggah (Ketuk untuk ubah)'
+                  //             : 'Unggah Dokumen Pendukung',
+                  //         isUploaded: _dokumenPendukung != null,
+                  //         onTap: () =>
+                  //             _showSourceSelectionPopup(context, 'pendukung'),
+                  //       ),
+                  //       const SizedBox(height: 16),
+                  //     ],
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 16),
+
+                  // Text(
+                  //   strError,
+                  //   style: TextStyle(
+                  //     color: Color(0xFF0F1E4A),
+                  //     fontSize: 18,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // ),
+
+                  // ==================== CARD 4: ALUR PERSETUJUAN ====================
+                  // Container(
+                  //   width: double.infinity,
+                  //   padding: const EdgeInsets.all(20),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white,
+                  //     borderRadius: BorderRadius.circular(24),
+                  //     boxShadow: [
+                  //       BoxShadow(
+                  //         color: Colors.black.withAlpha((0.02 * 255).round()),
+                  //         blurRadius: 10,
+                  //         offset: const Offset(0, 4),
+                  //       )
+                  //     ],
+                  //   ),
+                  //   child: Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       const Row(
+                  //         children: [
+                  //           Icon(Icons.check_circle_rounded,
+                  //               color: AppColors.accent, size: 20),
+                  //           const SizedBox(width: 10),
+                  //           Text(
                   //             'Alur Persetujuan',
                   //             style: TextStyle(
                   //                 color: Color(0xFF0F1E4A),
@@ -867,46 +962,60 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                   //       ),
                   //       const SizedBox(height: 24),
 
-                  //       // Stepper 1: Atasan Langsung (Selesai/Disetujui - Hijau)
-                  //       _buildPHTimelineTile(
+                  //       // Stepper 1: Atasan Langsung (Menunggu Persetujuan - Orange)
+                  //       _buildIzinTimelineTile(
                   //         title: 'Atasan Langsung',
-                  //         subtitle: 'Disetujui · 30 Jun 2026, 14.02',
-                  //         statusIcon: Icons.check,
-                  //         statusColor: const Color(0xFF2ECC71), // Hijau Sukses
+                  //         subtitle: 'Burhanuddin',
+                  //         statusIcon: Icons.access_time_filled_rounded,
+                  //         statusColor: AppColors.accent,
                   //       ),
 
-                  //       // Stepper 2: Human Resources (Ditolak - Red Alert #ff0000)
-                  //       _buildPHTimelineTile(
+                  //       // Stepper 2: Human Resources (Belum Mulai - Abu-abu)
+                  //       _buildIzinTimelineTile(
                   //         title: 'Human Resources',
-                  //         subtitle: 'Ditolak — saldo PH tidak mencukupi',
-                  //         statusIcon: Icons.close_rounded,
-                  //         statusColor: AppColors.alert, // #ff0000 - Red
+                  //         subtitle: 'Human Resources',
+                  //         statusIcon: Icons.access_time_filled_rounded,
+                  //         statusColor: const Color(0xFF94A3B8),
                   //         isLast: true,
                   //       ),
                   //     ],
                   //   ),
                   // ),
-                  const SizedBox(height: 24),
-
-                  // ==================== TOMBOL UTAMA: AJUKAN GANTI HARI ====================
+                  // const SizedBox(height: 24),
+                  // ==================== TOMBOL UTAMA: AJUKAN IZIN ====================
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        if (sisa_ph > 0) {
-                          if (_subjekController.text == "") {
-                            _showDialog("Subjek PH Belum Diisi");
-                          } else {
-                            _showDialogReq(
-                                "Anda mengajukan PH mulai tanggal ${_tanggalawalController.text} s/d ${_tanggalakhirController.text}, \n\n Apakah pengajuan anda sudah benar?");
-                          }
+                        print("_tanggalawal : " + _tanggalawalController.text);
+                        print(
+                            "_tanggalakhir : " + _tanggalakhirController.text);
+                        // Masukkan logika integrasi kirim form izin ke backend API
+
+                        // 1. String asal format Indonesia
+                        // String tanggalAsal = _tanggalawalController.text;
+                        // DateTime parsedDate =
+                        //     DateFormat('dd-MM-yyyy').parse(tanggalAsal);
+                        // String tanggalHasil =
+                        //     DateFormat('yyyy-MM-dd').format(parsedDate);
+
+                        // print(tanggalHasil);
+                        // if (_subjekController.text == "") {
+                        //   _showDialog("Subjek Pengajuan Belum Diisi");
+                        if (selectedDate == "") {
+                          _showDialog("Tanggal Absen belum dipilih");
+                        } else {
+                          // } else {
+                          _showDialogReq(
+                              "Anda mengajukan Saldo PH untuk tanggal ${tgldiajukan}, \n\n Apakah pengajuan anda sudah benar?");
                         }
+                        // }
                       },
                       icon: const Icon(Icons.check_circle,
                           color: Colors.white, size: 20),
                       label: const Text(
-                        'Ajukan Pengganti Hari',
+                        'Ajukan Saldo PH',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -914,7 +1023,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            sisa_ph > 0 ? AppColors.accent : Colors.grey,
+                            AppColors.accent, // Orange Accent (#fd8a02)
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
@@ -924,7 +1033,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                   const SizedBox(height: 50),
                   // ==================== KELOMPOK MENU: RIWAYAT ====================
                   _buildSectionCard(
-                    title: 'Riwayat PH',
+                    title: 'Riwayat Pengajuan Saldo PH',
                     iconTitle: Icons.history_toggle_off_rounded,
                     iconColor: AppColors.accent,
                     showSeeAll: true,
@@ -963,19 +1072,14 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
 
                             // 2. Ambil maksimal 5 data unik teratas dan petakan ke widget Row
                             return dataabsen.map((item) {
-                              String rawDateStart = item['ph_datestart'] ?? '';
-                              String rawDateEnd = item['ph_dateend'] ?? '';
-                              String statusText = item['ph_subject'] ?? '';
+                              String rawDateStart =
+                                  item['ph_earned_date'] ?? '';
+                              String rawDateEnd = item['ph_expiry_date'] ?? '';
+                              String statusText = item['ph_notes'] ?? '';
                               String formattedDateStart = '-';
                               String formattedDateEnd = '-';
                               String image_url = item['ph_file'] ?? '';
-                              int isapproved = item['ph_approved'] ?? 0;
-
-                              // if (isapproved == 1) {
-                              //   statusText = statusText + "   (Approved)";
-                              // } else {
-                              //   statusText = statusText + "   (Pending)";
-                              // }
+                              int isapproved = item['ph_status'] ?? 0;
 
                               print("rawDate2 $rawDateStart");
 
@@ -1003,15 +1107,21 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                                 }
                               }
 
+                              // if (isapproved == 1) {
+                              //   formattedDateStart =
+                              //       formattedDateStart + "   (Disetujui)";
+                              // } else {
+                              //   formattedDateStart =
+                              //       formattedDateStart + "   (Dalam Pangajuan)";
+                              // }
+
                               // Tampilkan Baris Widget per Item Data
                               return Padding(
                                 padding: const EdgeInsets.only(
                                     bottom: 0, left: 0, right: 0),
                                 child: _buildAttendanceRow(
-                                  id: item['ph_id'] ?? '',
-                                  dayDate: formattedDateStart +
-                                      " - " +
-                                      formattedDateEnd,
+                                  id: item['ph_balance_id'] ?? '',
+                                  dayDate: formattedDateStart,
                                   statusText: statusText,
                                   image_url: image_url,
                                   iconTitle: isapproved == 1
@@ -1035,9 +1145,164 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
               ),
             ),
           ),
-        ]));
+        ],
+      ),
+    );
   }
 
+  // ==================== REUSABLE HELPER METODE WIDGET ====================
+  Widget _buildFormLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF0F1E4A),
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField(
+      {required TextEditingController controller,
+      required String hintText,
+      TextInputType keyboardType = TextInputType.text}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(
+          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: const Color(0xFFFBFBFD),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextAreaField({
+    required TextEditingController controller,
+    required String hintText,
+    int minLines = 2, // Default awal 2 baris, bisa disesuaikan saat dipanggil
+    int? maxLines, // Kosongkan agar bisa memanjang otomatis sesuai ketikan
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType
+          .multiline, // Mengoptimalkan keyboard HP untuk teks paragraf banyak baris
+      minLines: minLines,
+      maxLines: maxLines,
+      style: const TextStyle(
+          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: const Color(0xFFFBFBFD),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.grey.shade200)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.grey.shade200)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
+      ),
+    );
+  }
+
+  Widget _buildDropdownInputField({
+    required TextEditingController controller,
+    required String hintText,
+  }) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(
+          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: const Color(0xFFFBFBFD),
+        suffixIcon: Icon(Icons.keyboard_arrow_down_rounded,
+            color: Colors.grey.shade500, size: 24),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField({
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF0F1E4A),
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(
+                0xFFF0F2F6), // Isian abu pudar presisi sesuai gambar
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+          ),
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // REUSABLE HELPER: Membuat Kotak Unggah Dokumen
   // REUSABLE HELPER: Membuat Kotak Unggah Berkas dengan Status Dinamis
   Widget _buildUploadBox({
     required String label,
@@ -1087,151 +1352,8 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
     );
   }
 
-  // ==================== HELPER WIDGET FORM & TIMELINE ====================
-  Widget _buildFormLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-            color: Color(0xFF0F1E4A),
-            fontSize: 14,
-            fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildReadOnlyField({
-    required String label,
-    required String value,
-    Color? textColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF0F1E4A),
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(
-                0xFFF0F2F6), // Isian abu pudar presisi sesuai gambar
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey.shade200, width: 1),
-          ),
-          child: Text(
-            value,
-            style: TextStyle(
-              color: textColor ?? Colors.grey.shade600,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInputField(
-      {required TextEditingController controller,
-      required String hintText,
-      TextInputType keyboardType = TextInputType.text}) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: const TextStyle(
-          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        filled: true,
-        fillColor: const Color(0xFFFBFBFD),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-      ),
-    );
-  }
-
-  Widget _buildTextAreaField({
-    required TextEditingController controller,
-    required String hintText,
-    int minLines = 2, // Default awal 2 baris, bisa disesuaikan saat dipanggil
-    int? maxLines, // Kosongkan agar bisa memanjang otomatis sesuai ketikan
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType
-          .multiline, // Mengoptimalkan keyboard HP untuk teks paragraf banyak baris
-      minLines: minLines,
-      maxLines: maxLines,
-      style: const TextStyle(
-          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        filled: true,
-        fillColor: const Color(0xFFFBFBFD),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-      ),
-    );
-  }
-
-  Widget _buildDropdownInputField(
-      {required TextEditingController controller, required String hintText}) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(
-          fontSize: 15, color: Color(0xFF0F1E4A), fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        filled: true,
-        fillColor: const Color(0xFFFBFBFD),
-        suffixIcon: Icon(Icons.keyboard_arrow_down_rounded,
-            color: Colors.grey.shade500, size: 24),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-      ),
-    );
-  }
-
-  Widget _buildPHTimelineTile({
+  // REUSABLE HELPER: Membuat Baris Timeline Alur Persetujuan Vertikal
+  Widget _buildIzinTimelineTile({
     required String title,
     required String subtitle,
     required IconData statusIcon,
@@ -1275,12 +1397,9 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: statusColor == AppColors.alert
-                      ? AppColors.alert
-                      : Colors.grey.shade500,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+                    color: Colors.grey.shade500,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 12),
             ],
@@ -1394,6 +1513,99 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
     );
   }
 
+  _showDialog(String keterangan) async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: Text(
+                keterangan,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text(
+              "OK",
+              style: TextStyle(
+                color: Color.fromARGB(255, 2, 8, 134),
+                fontSize: 16.0,
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  _showDialogReq(String keterangan) async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: Text(
+                keterangan,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: new Text("CANCEL"),
+          )),
+          Container(
+              child: ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              if (_dokumenPendukung != null) {
+                setState(() {
+                  isLoading = true;
+                });
+
+                File? compressedFile = await _compressImage(_dokumenPendukung!);
+                // _getCurrentLocation(compressedFile!);
+                insertdata(compressedFile!);
+              } else {
+                setState(() {
+                  isLoading = true;
+                });
+                File? noimageFile = await noimage();
+                // _getCurrentLocation(noimageFile!);
+                insertdata(noimageFile!);
+                // _showDialog("Dokumen Pendukung belum dipilih");
+              }
+            },
+            child: new Text("OK"),
+          )),
+        ],
+      ),
+    );
+  }
+
   // REUSABLE HELPER: Membuat Card Section Induk
   Widget _buildSectionCard({
     required String title,
@@ -1498,7 +1710,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        statusText,
+                        dayDate,
                         style: const TextStyle(
                           fontSize: 12.0,
                           color: Colors.black,
@@ -1507,7 +1719,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                       ),
                       const SizedBox(height: 4.0),
                       Text(
-                        dayDate,
+                        statusText,
                         style: TextStyle(
                             fontSize: 12.0, color: Colors.grey.shade600),
                       ),
@@ -1516,18 +1728,18 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                 ),
 
                 // Tombol Gambar Kanan
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.image, color: Colors.black, size: 22),
-                  onPressed: () {
-                    print(UserSession.url_api_image + image_url);
-                    widget.onIndexChanged(13);
-                    widget.imageurl(UserSession.url_api_image + image_url);
-                    widget.DataHistory(dataabsen);
-                    widget.DataApprovalHistory(dataabsenapproval);
-                  },
-                ),
+                // IconButton(
+                //   padding: EdgeInsets.zero,
+                //   constraints: const BoxConstraints(),
+                //   icon: const Icon(Icons.image, color: Colors.black, size: 22),
+                //   onPressed: () {
+                //     print(UserSession.url_api_image + image_url);
+                //     widget.onIndexChanged(17);
+                //     widget.imageurl(UserSession.url_api_image + image_url);
+                //     widget.DataHistory(dataabsen);
+                //     widget.DataApprovalHistory(dataabsenapproval);
+                //   },
+                // ),
               ],
             ),
 
@@ -1537,15 +1749,17 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
             // Menggunakan operator spread (...) untuk memasukkan list widget ke dalam children
             ...dataabsenapproval
                 .where((item) =>
-                    item['ph_id'].toString() ==
+                    item['ph_balance_id'].toString() ==
                     id.toString()) // Baris Filter Data
                 .map((item) {
               // Ambil nama langsung ke variabel lokal baru di dalam map
-              final dynamicName = item['phapproval_name'] ?? 'TIDAK DIKETAHUI';
-              final dynamicRole = item['phapproval_position'] ?? managerRole;
+              final dynamicName =
+                  item['phbalanceapproval_name'] ?? 'TIDAK DIKETAHUI';
+              final dynamicRole =
+                  item['phbalanceapproval_position'] ?? managerRole;
               // final dynamicStatus =
               //     item['requestabsenceapproval_iscommited'] ?? approvalStatus;
-              if (item['phapproval_iscommited'] == 1) {
+              if (item['phbalanceapproval_iscommited'] == 1) {
                 approvalStatus = "Disetujui";
               } else {
                 approvalStatus = "Dalam Pengajuan";
@@ -1613,6 +1827,45 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
                 ),
               );
             }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioJenisCutiTile(String label, String id, int jumlah) {
+    final bool isSelected = _selectedJenisIzinName == label;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedJenisIzinID = id;
+          _selectedJenisIzinName = label;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              isSelected
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              color:
+                  isSelected ? const Color(0xFF001F82) : Colors.grey.shade400,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            // MEMBUNGKUS TEXT DENGAN EXPANDED AGAR OTOMATIS TURUN BARIS
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF0F1E4A),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
       ),

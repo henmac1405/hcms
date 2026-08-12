@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 // import 'package:intl/intl.dart';
 import 'app_colors.dart'; // Memastikan manajemen warna terpusat tetap konsisten
 // import 'dart:async';
@@ -22,6 +23,7 @@ import 'showfullimage.dart';
 import 'idcard.dart';
 import 'pdfexport.dart';
 import 'requestabsence.dart';
+import 'requestph.dart';
 
 class HomeNewPage extends StatefulWidget {
   final List imageslidePaths;
@@ -62,6 +64,15 @@ class _HomeNewPageState extends State<HomeNewPage> {
   String jatahCuti = "";
   String jumlahCuti = "";
   String sisaCuti = "";
+  String _year = "";
+  String _month = "";
+  String shift_id = "";
+  String daynow = "";
+
+  var yearFormat = DateFormat("yyyy");
+  var monthFormat = DateFormat("M");
+  var dayFormat = DateFormat("d");
+  final dt = new DateTime.now();
 
   // late final List<Widget> _pages;
   List<dynamic> absencehistory = [];
@@ -69,8 +80,51 @@ class _HomeNewPageState extends State<HomeNewPage> {
   List<dynamic> datahistoryIzin = [];
   List<dynamic> datahistorySakit = [];
   List<dynamic> datahistoryPH = [];
+  List<dynamic> datahistoryPHApproval = [];
   List<dynamic> datahistoryCuti = [];
   List<dynamic> datahistoryRequestAbsence = [];
+  List<dynamic> datahistoryRequestAbsenceApproval = [];
+
+  void cek_shift() {
+    _year = yearFormat.format(dt);
+    _month = monthFormat.format(dt);
+    daynow = dayFormat.format(dt);
+    fh
+        .employeeshift(
+            UserSession.database_name,
+            _year,
+            _month,
+            UserSession.employee_id,
+            UserSession.apikey,
+            UserSession.token,
+            "employeeshift/show",
+            UserSession.url_api)
+        .then((resultshift) {
+      if (resultshift.isNotEmpty) {
+        resultshift.forEach((value) {
+          shift_id = value['employeeshift_' + daynow] ?? "";
+          shift_id = shift_id.trim();
+          print('SHIFT ID : ' + daynow);
+          print(value['employeeshift_' + daynow] ?? "");
+          print(shift_id);
+          UserSession.shift_id = shift_id;
+        });
+        if (shift_id == "") {
+          UserSession.shift_id = "NULL";
+          // _showDialog("Anda Belum Memiliki Jadwal Shift Hari ini");
+        } else {
+          // print("loadNetworkImageToOpenFile :");
+
+          // });
+        }
+        print("shift_id : " + shift_id);
+      } else {
+        // _showDialog("Anda Belum Memiliki Jadwal Shift Bulan ini");
+        UserSession.shift_id = "NULL";
+        print("shift_id : NULL");
+      }
+    });
+  }
 
   void _absen_history() {
     fh
@@ -123,6 +177,7 @@ class _HomeNewPageState extends State<HomeNewPage> {
     _bottomNavIndex = widget.noindex;
     if (widget.noindex == 0) {
       _absen_history();
+      cek_shift();
     }
     print(
         "${UserSession.profile_image_url}?t=${DateTime.now().millisecondsSinceEpoch}"); //
@@ -313,9 +368,15 @@ class _HomeNewPageState extends State<HomeNewPage> {
       ), // Index 8
       PenggantiHariPage(
         HistoryData: datahistoryPH,
+        HistoryDataApproval: datahistoryPHApproval,
         DataHistory: (newData) {
           setState(() {
             datahistoryPH = newData;
+          });
+        },
+        DataApprovalHistory: (newData) {
+          setState(() {
+            datahistoryPHApproval = newData;
           });
         },
         onIndexChanged: (newIndex) {
@@ -439,9 +500,15 @@ class _HomeNewPageState extends State<HomeNewPage> {
           sisaCuti: sisaCuti), // Index 15 : PDF
       RequestAbsencePage(
         HistoryData: datahistoryRequestAbsence,
+        HistoryDataApproval: datahistoryRequestAbsenceApproval,
         DataHistory: (newData) {
           setState(() {
             datahistoryRequestAbsence = newData;
+          });
+        },
+        DataApprovalHistory: (newData) {
+          setState(() {
+            datahistoryRequestAbsenceApproval = newData;
           });
         },
         onIndexChanged: (newIndex) {
@@ -456,6 +523,31 @@ class _HomeNewPageState extends State<HomeNewPage> {
           });
         },
       ), // index 16 : Request Absence
+      RequestPHPage(
+        HistoryData: datahistoryRequestAbsence,
+        HistoryDataApproval: datahistoryRequestAbsenceApproval,
+        DataHistory: (newData) {
+          setState(() {
+            datahistoryRequestAbsence = newData;
+          });
+        },
+        DataApprovalHistory: (newData) {
+          setState(() {
+            datahistoryRequestAbsenceApproval = newData;
+          });
+        },
+        onIndexChanged: (newIndex) {
+          setState(() {
+            _bottomNavIndex = newIndex;
+            noindex = 16;
+          });
+        },
+        imageurl: (newString) {
+          setState(() {
+            imageurl = newString;
+          });
+        },
+      ), // index 17 : Request Absence
     ];
 
     return PopScope(
@@ -656,7 +748,7 @@ class _HomeNewPageState extends State<HomeNewPage> {
                                   'Halo, ${UserSession.employee_name}',
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -709,7 +801,7 @@ class _HomeNewPageState extends State<HomeNewPage> {
           child: BottomNavigationBar(
             currentIndex: (_bottomNavIndex == 5 || _bottomNavIndex == 14)
                 ? 4 // Jika halaman Change Password (5) aktif, sorot tab Profile (4)
-                : ([6, 7, 8, 9, 10, 15, 16].contains(_bottomNavIndex)
+                : ([6, 7, 8, 9, 10, 15, 16, 17].contains(_bottomNavIndex)
                     ? 2 // Jika sub-halaman cuti/sakit aktif, sorot tab Leave (2)
                     : ([11, 12, 13].contains(_bottomNavIndex)
                         ? 0 // 🔑 SOLUSI: Jika index 11 atau 12 aktif, sorot tab Home (0)
@@ -762,18 +854,23 @@ class _HomeNewPageState extends State<HomeNewPage> {
   }
 
   // Fungsi untuk memunculkan Bottom Sheet Menu Leave yang melayang
+  // Fungsi untuk memunculkan Bottom Sheet Menu Leave yang melayang
   void _showLeaveMenuPopup(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors
           .transparent, // Membuat background bawaan transparan agar bisa custom shape
       elevation: 0,
+      isScrollControlled:
+          true, // Mengizinkan modal menyesuaikan ukuran layar secara penuh/maksimal
       builder: (BuildContext context) {
         return Container(
           margin: const EdgeInsets.only(
               left: 32,
               right: 32,
-              bottom: 20), // Memberikan jarak agar melayang
+              bottom: 20,
+              top:
+                  20), // Ditambahkan top margin untuk proteksi safe area layar atas
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -786,102 +883,131 @@ class _HomeNewPageState extends State<HomeNewPage> {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize
-                .min, // Membuat tinggi modal menyesuaikan jumlah item menu
-            children: [
-              // 4. Day Replacement (Plum Secondary)
-              _buildPopupMenuItem(
-                label: 'Pengganti Hari',
-                iconData: Icons.timelapse,
-                iconColor: UserSession.employee_type == "EMP"
-                    ? AppColors.secondary
-                    : Colors.grey,
-                textColor: const Color(0xFF0F1E4A),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Tambahkan aksi navigasi ke form Day Replacement di sini
-                  if (UserSession.employee_type == "EMP") {
-                    setState(() {
-                      _bottomNavIndex = 9;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              // 3. Permission Leave (Orange Accent)
-              _buildPopupMenuItem(
-                label: 'Izin',
-                iconData: Icons.assignment_outlined,
-                iconColor: UserSession.employee_type == "EMP"
-                    ? AppColors.accent
-                    : Colors.grey,
-                textColor: const Color(0xFF0F1E4A),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Tambahkan aksi navigasi ke form Permission Leave di sini
-                  if (UserSession.employee_type == "EMP") {
-                    setState(() {
-                      _bottomNavIndex = 8;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-// 2. Sick Leave (Red Alert)
-              _buildPopupMenuItem(
-                label: 'Sakit',
-                iconData: Icons.add_circle,
-                iconColor: UserSession.employee_type == "EMP"
-                    ? AppColors.alert
-                    : Colors.grey,
-                textColor: const Color(0xFF0F1E4A),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Tambahkan aksi navigasi ke form Sick Leave di sini
-                  if (UserSession.employee_type == "EMP") {
-                    setState(() {
-                      _bottomNavIndex = 7;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              // 1. Leave Request (Navy Blue)
-              _buildPopupMenuItem(
-                label: 'Cuti',
-                iconData: Icons.calendar_month,
-                iconColor: UserSession.employee_type == "EMP"
-                    ? AppColors.primary
-                    : Colors.grey,
-                textColor: const Color(0xFF0F1E4A),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Tambahkan aksi navigasi ke form Leave Request di sini
-                  if (UserSession.employee_type == "EMP") {
-                    setState(() {
-                      _bottomNavIndex = 6;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              // 1. Leave Request (Navy Blue)
-              _buildPopupMenuItem(
-                label: 'Pengajuan Absensi',
-                iconData: Icons.calendar_month,
-                iconColor: Colors.green,
-                textColor: const Color(0xFF0F1E4A),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Tambahkan aksi navigasi ke form Leave Request di sini
+          // Solusi Utama: Membungkus konten agar bisa di-scroll saat overflow
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize
+                  .min, // Membuat tinggi modal menyesuaikan jumlah item menu
+              children: [
+                // 4. Day Replacement (Plum Secondary)
+                _buildPopupMenuItem(
+                  label: 'Pengganti Hari',
+                  iconData: Icons.timelapse,
+                  iconColor: UserSession.employee_type == "EMP"
+                      ? AppColors.secondary
+                      : Colors.grey,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (UserSession.employee_type == "EMP") {
+                      if (UserSession.shift_id == "NULL") {
+                        _showDialog("Anda belum memiliki jadwal shift");
+                      } else {
+                        setState(() {
+                          _bottomNavIndex = 9;
+                        });
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
 
-                  setState(() {
-                    _bottomNavIndex = 16;
-                  });
-                },
-              ),
-            ],
+                // 3. Permission Leave (Orange Accent)
+                _buildPopupMenuItem(
+                  label: 'Izin',
+                  iconData: Icons.assignment_outlined,
+                  iconColor: UserSession.employee_type == "EMP"
+                      ? AppColors.accent
+                      : Colors.grey,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (UserSession.employee_type == "EMP") {
+                      setState(() {
+                        if (UserSession.shift_id == "NULL") {
+                          _showDialog("Anda belum memiliki jadwal shift");
+                        } else {
+                          _bottomNavIndex = 8;
+                        }
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Sick Leave (Red Alert)
+                _buildPopupMenuItem(
+                  label: 'Sakit',
+                  iconData: Icons.add_circle,
+                  iconColor: UserSession.employee_type == "EMP"
+                      ? AppColors.alert
+                      : Colors.grey,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (UserSession.employee_type == "EMP") {
+                      setState(() {
+                        _bottomNavIndex = 7;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 1. Leave Request (Navy Blue)
+                _buildPopupMenuItem(
+                  label: 'Cuti',
+                  iconData: Icons.calendar_month,
+                  iconColor: UserSession.employee_type == "EMP"
+                      ? AppColors.primary
+                      : Colors.grey,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (UserSession.employee_type == "EMP") {
+                      if (UserSession.shift_id == "NULL") {
+                        _showDialog("Anda belum memiliki jadwal shift");
+                      } else {
+                        setState(() {
+                          _bottomNavIndex = 6;
+                        });
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Pengajuan Absensi
+                _buildPopupMenuItem(
+                  label: 'Pengajuan Absensi',
+                  iconData: Icons.lock_clock,
+                  iconColor: Colors.green,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _bottomNavIndex = 16;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Pengajuan Saldo
+                _buildPopupMenuItem(
+                  label: 'Pengajuan Saldo PH',
+                  iconData: Icons.calendar_today,
+                  iconColor: Colors.pink,
+                  textColor: const Color(0xFF0F1E4A),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _bottomNavIndex = 17;
+                    });
+                  },
+                ),
+                // Menghapus kontainer kosong SizedBox paling bawah agar jarak padding tidak melar berlebih
+              ],
+            ),
           ),
         );
       },
@@ -1112,6 +1238,43 @@ class _HomeNewPageState extends State<HomeNewPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  _showDialog(String keterangan) async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: Text(
+                keterangan,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text(
+              "OK",
+              style: TextStyle(
+                color: Color.fromARGB(255, 2, 8, 134),
+                fontSize: 16.0,
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }

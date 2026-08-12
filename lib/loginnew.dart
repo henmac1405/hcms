@@ -904,48 +904,52 @@ class _LoginNewPageState extends State<LoginNewPage> {
               });
             });
           });
-        });
-        if (employee_type == "EMP") {
-          fh
-              .employeeshift(database_name, _year, _month, employee_id, apikey,
-                  token, "employeeshift/show", url_api)
-              .then((resultshift) {
-            if (resultshift.isNotEmpty) {
-              resultshift.forEach((value) {
-                shift_id = value['employeeshift_' + daynow] ?? "";
-                shift_id = shift_id.trim();
-                print('SHIFT ID : ' + daynow);
-                print(value['employeeshift_' + daynow] ?? "");
-                print(shift_id);
-              });
-              if (shift_id == "") {
-                _showDialog("Anda Belum Memiliki Jadwal Shift Hari ini");
-              } else {
-                print("loadNetworkImageToOpenFile :");
-                // loadNetworkImageToOpenFile(url_api_image + employee_id + ".jpg")
-                //     .then((result) {
-                setIntoUserSession().then((hasils) {
-                  _navigateToHome(context, 0);
-                });
-                // });
-              }
-            } else {
-              _showDialog("Anda Belum Memiliki Jadwal Shift Bulan ini");
-            }
-          });
-        } else {
-          // hideLoadingDialog(context);
-          // if (_type == "ABSEN") {
-          // loadNetworkImageToOpenFile(url_api_image + employee_id + ".jpg")
-          //     .then((result) {
           setIntoUserSession().then((hasils) {
             _navigateToHome(context, 0);
           });
-          // });
-          // } else {
-          //   _showDialog("Mohon hubungi atasan anda");
-          // }
-        }
+        });
+
+        // if (employee_type == "EMP") {
+        //   fh
+        //       .employeeshift(database_name, _year, _month, employee_id, apikey,
+        //           token, "employeeshift/show", url_api)
+        //       .then((resultshift) {
+        //     if (resultshift.isNotEmpty) {
+        //       resultshift.forEach((value) {
+        //         shift_id = value['employeeshift_' + daynow] ?? "";
+        //         shift_id = shift_id.trim();
+        //         print('SHIFT ID : ' + daynow);
+        //         print(value['employeeshift_' + daynow] ?? "");
+        //         print(shift_id);
+        //       });
+        //       if (shift_id == "") {
+        //         _showDialog("Anda Belum Memiliki Jadwal Shift Hari ini");
+        //       } else {
+        //         print("loadNetworkImageToOpenFile :");
+        //         // loadNetworkImageToOpenFile(url_api_image + employee_id + ".jpg")
+        //         //     .then((result) {
+        //         setIntoUserSession().then((hasils) {
+        //           _navigateToHome(context, 0);
+        //         });
+        //         // });
+        //       }
+        //     } else {
+        //       _showDialog("Anda Belum Memiliki Jadwal Shift Bulan ini");
+        //     }
+        //   });
+        // } else {
+        //   // hideLoadingDialog(context);
+        //   // if (_type == "ABSEN") {
+        //   // loadNetworkImageToOpenFile(url_api_image + employee_id + ".jpg")
+        //   //     .then((result) {
+        //   setIntoUserSession().then((hasils) {
+        //     _navigateToHome(context, 0);
+        //   });
+        //   // });
+        //   // } else {
+        //   //   _showDialog("Mohon hubungi atasan anda");
+        //   // }
+        // }
       } else {
         // hideLoadingDialog(context);
         //LoadingScreen.instance().hide();

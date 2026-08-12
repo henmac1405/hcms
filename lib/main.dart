@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
   String url_api_slide =
       "https://sso.transentertainment.com/assets/upload/slides/";
 
-  String url_api_lokal = "http://172.16.5.230/api-ci3-dev";
+  String url_api_lokal = "http://172.16.5.227/api-ci3-dev";
 
   String debug = "on";
   // This widget is the root of your application.

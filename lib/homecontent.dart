@@ -59,6 +59,7 @@ class _HomeContentSectionState extends State<HomeContentSection> {
   String strTimeZone = "";
   String formattedDate = "";
   List<dynamic> dataabsen = [];
+  String shift_id = "";
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _HomeContentSectionState extends State<HomeContentSection> {
     cekabsenhariini();
     date_now = dailyFormat.format(now);
     formattedDate = DateFormat('EEEE dd MMM yyyy', 'id_ID').format(now);
-
+    shift_id = UserSession.shift_id;
     // _absen_history();
   }
 
@@ -531,7 +532,43 @@ class _HomeContentSectionState extends State<HomeContentSection> {
 
                     // const SizedBox(height: 25),
 
-                    // KELOMPOK MENU: ABSENSI HARI INI
+// SHIFT NULL
+                    UserSession.shift_id == "NULL"
+                        ? Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                  0xFFE8F0FE), // Background biru sangat muda
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info,
+                                  color: Color(0xFF001668),
+                                  size: 20,
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Anda Belum Memiliki Jadwal Shift',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(),
+                    UserSession.shift_id == "NULL"
+                        ? SizedBox(height: 12)
+                        : Container(),
+
+                    // BELUM OUT KEMARIN
                     outyesterday == true
                         ? Container(
                             padding: const EdgeInsets.all(20),
@@ -587,7 +624,13 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                                     if (strcheck_in == "Masuk") {
                                       if (isLocation == true) {
                                         // _getCurrentLocationAbsence("Masuk");
-                                        _navigateToFaceDetector(context, "IN");
+                                        if (UserSession.shift_id == "NULL") {
+                                          _showDialog(
+                                              "Anda belum memiliki jadwal shift");
+                                        } else {
+                                          _navigateToFaceDetector(
+                                              context, "IN");
+                                        }
                                       } else {
                                         _showDialog("Lokasi tidak ditemukan");
                                       }
@@ -636,8 +679,16 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                                       if (strcheck_out == "Keluar") {
                                         if (isLocation == true) {
                                           // _getCurrentLocationAbsence("Keluar");
-                                          _navigateToFaceDetector(
-                                              context, "OUT");
+                                          if (UserSession.shift_id == "NULL") {
+                                            _showDialog(
+                                                "Anda belum memiliki jadwal shift");
+                                          } else {
+                                            _showDialogReq(
+                                                "Apakah Anda yakin ingin melakukan absen keluar sekarang?",
+                                                "OUT");
+                                          }
+                                          // _navigateToFaceDetector(
+                                          //     context, "OUT");
                                         } else {
                                           _showDialog("Lokasi tidak ditemukan");
                                         }
@@ -769,7 +820,12 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                                   onTap: () {
                                     // Berpindah halaman ke form Cuti Tahunan (Index 6)
                                     if (UserSession.employee_type == "EMP") {
-                                      widget.onIndexChanged(6);
+                                      if (UserSession.shift_id == "NULL") {
+                                        _showDialog(
+                                            "Anda belum memiliki jadwal shift");
+                                      } else {
+                                        widget.onIndexChanged(6);
+                                      }
                                     }
                                   },
                                   borderRadius: BorderRadius.circular(
@@ -814,7 +870,12 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                                 onTap: () {
                                   // Berpindah halaman ke form Cuti Tahunan (Index 6)
                                   if (UserSession.employee_type == "EMP") {
-                                    widget.onIndexChanged(8);
+                                    if (UserSession.shift_id == "NULL") {
+                                      _showDialog(
+                                          "Anda belum memiliki jadwal shift");
+                                    } else {
+                                      widget.onIndexChanged(8);
+                                    }
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(16),
@@ -833,7 +894,12 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                                   onTap: () {
                                     // Berpindah halaman ke form Cuti Tahunan (Index 6)
                                     if (UserSession.employee_type == "EMP") {
-                                      widget.onIndexChanged(9);
+                                      if (UserSession.shift_id == "NULL") {
+                                        _showDialog(
+                                            "Anda belum memiliki jadwal shift");
+                                      } else {
+                                        widget.onIndexChanged(9);
+                                      }
                                     }
                                   },
                                   borderRadius: BorderRadius.circular(16),
@@ -1334,6 +1400,46 @@ class _HomeContentSectionState extends State<HomeContentSection> {
               Navigator.pop(context);
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  _showDialogReq(String keterangan, String input) async {
+    await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        contentPadding: EdgeInsets.all(16.0),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              //padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
+              child: Text(
+                keterangan,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: new Text("CANCEL"),
+          )),
+          Container(
+              child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToFaceDetector(context, input);
+            },
+            child: new Text("OK"),
+          )),
         ],
       ),
     );

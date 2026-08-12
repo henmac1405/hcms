@@ -76,6 +76,7 @@ class _CutiPageState extends State<CutiPage> {
   bool isLoading = false;
 
   List<dynamic> datacuti = [];
+  List<dynamic> datacutiapproval = [];
   List<dynamic> leavetype = [];
   List<dynamic> leavebalance = [];
   String leave_date = "";
@@ -84,6 +85,7 @@ class _CutiPageState extends State<CutiPage> {
   int jatah_cuti = 0;
   int jatah_cuti_bulanan = 0;
   int jumlah_diambil = 0;
+  bool btndisable = false;
   @override
   void initState() {
     super.initState();
@@ -92,6 +94,7 @@ class _CutiPageState extends State<CutiPage> {
     master_leavetype();
     master_leave_balance();
     cuti_history();
+    cutiapproval_history();
   }
 
   @override
@@ -281,10 +284,37 @@ class _CutiPageState extends State<CutiPage> {
       setState(() {
         isLoading = false;
       });
+      print("cuti_history");
       print(hasils);
       if (hasils.length > 0) {
         setState(() {
           datacuti = hasils;
+        });
+      }
+    });
+  }
+
+  void cutiapproval_history() {
+    setState(() {
+      isLoading = true;
+    });
+    fh
+        .cuti_history(
+            UserSession.database_name,
+            UserSession.employee_personalid,
+            UserSession.apikey,
+            UserSession.token,
+            "cuti/showcutiapproval",
+            UserSession.url_api)
+        .then((hasils) async {
+      setState(() {
+        isLoading = false;
+      });
+      print("cutiapproval_history");
+      print(hasils);
+      if (hasils.length > 0) {
+        setState(() {
+          datacutiapproval = hasils;
         });
       }
     });
@@ -758,15 +788,17 @@ class _CutiPageState extends State<CutiPage> {
                       height: 54,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          if (_subjekController.text == "") {
-                            _showDialog("Subjek Cuti Belum Diisi");
-                          } else if (_selectedJenisCutiID == "") {
-                            _showDialog("Jenis Cuti belum dipilih");
-                          } else if (_alamatKontakController.text == "") {
-                            _showDialog("Alamat kontak belum diisi");
-                          } else {
-                            _showDialogReq(
-                                "Anda mengajukan cuti kerja mulai tanggal ${_tanggalawalController.text} s/d ${_tanggalakhirController.text}, \n\n Apakah pengajuan anda sudah benar?");
+                          if (btndisable == false) {
+                            if (_subjekController.text == "") {
+                              _showDialog("Subjek Cuti Belum Diisi");
+                            } else if (_selectedJenisCutiID == "") {
+                              _showDialog("Jenis Cuti belum dipilih");
+                            } else if (_alamatKontakController.text == "") {
+                              _showDialog("Alamat kontak belum diisi");
+                            } else {
+                              _showDialogReq(
+                                  "Anda mengajukan cuti kerja mulai tanggal ${_tanggalawalController.text} s/d ${_tanggalakhirController.text}, \n\n Apakah pengajuan anda sudah benar?");
+                            }
                           }
                         },
                         icon: const Icon(Icons.check_circle,
@@ -780,7 +812,9 @@ class _CutiPageState extends State<CutiPage> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent, // #fd8a02 - Orange
+                          backgroundColor: btndisable == false
+                              ? AppColors.accent
+                              : Colors.grey,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -828,7 +862,7 @@ class _CutiPageState extends State<CutiPage> {
                           else
                             ...() {
                               // 2. Ambil maksimal 5 data unik teratas dan petakan ke widget Row
-                              return datacuti.take(5).map((item) {
+                              return datacuti.map((item) {
                                 String rawDateStart =
                                     item['leave_datestart'] ?? '';
                                 String rawDateEnd = item['leave_dateend'] ?? '';
@@ -846,6 +880,7 @@ class _CutiPageState extends State<CutiPage> {
                                 String leave_type = item['leavetype_id'] ?? '';
                                 int jatahCuti = item['jatah_cuti'] ?? 0;
                                 int sisaCuti = item['sisa_cuti'] ?? 0;
+                                int isapproved = item['leave_isapproval'] ?? 0;
 
                                 if (leave_date.isNotEmpty) {
                                   try {
@@ -887,22 +922,31 @@ class _CutiPageState extends State<CutiPage> {
 
                                 // Tampilkan Baris Widget per Item Data
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 0),
+                                  padding: const EdgeInsets.only(
+                                      bottom: 0, left: 0, right: 0),
                                   child: _buildAttendanceRow(
-                                      dayDate: formattedDateStart +
-                                          " - " +
-                                          formattedDateEnd,
-                                      statusText: statusText,
-                                      leave_date: formattedDate,
-                                      leave_datestart: formattedDateStart,
-                                      leave_dateend: formattedDateEnd,
-                                      leave_qty: leave_qty.toString(),
-                                      leave_descr: leave_descr,
-                                      leave_nokontak: leave_nokontak,
-                                      leave_alamatkontak: leave_alamatkontak,
-                                      leave_type: leave_type,
-                                      jatahCuti: jatahCuti.toString(),
-                                      sisaCuti: sisaCuti.toString()),
+                                    leave_id: item['leave_id'] ?? '',
+                                    dayDate: formattedDateStart +
+                                        " - " +
+                                        formattedDateEnd,
+                                    statusText: statusText,
+                                    leave_date: formattedDate,
+                                    leave_datestart: formattedDateStart,
+                                    leave_dateend: formattedDateEnd,
+                                    leave_qty: leave_qty.toString(),
+                                    leave_descr: leave_descr,
+                                    leave_nokontak: leave_nokontak,
+                                    leave_alamatkontak: leave_alamatkontak,
+                                    leave_type: leave_type,
+                                    jatahCuti: jatahCuti.toString(),
+                                    sisaCuti: sisaCuti.toString(),
+                                    iconTitle: isapproved == 1
+                                        ? Icons.check_circle
+                                        : Icons.history_toggle_off_rounded,
+                                    iconColor: isapproved == 1
+                                        ? Colors.green
+                                        : AppColors.accent,
+                                  ),
                                 );
                               }).toList();
                             }(),
@@ -1035,6 +1079,11 @@ class _CutiPageState extends State<CutiPage> {
           _selectedJenisCutiID = id;
           _selectedJenisCuti = label;
           _selectedJatahCuti = jumlah;
+          if (sisa_cuti == 0 && _selectedJenisCuti == "CUTI TAHUNAN") {
+            btndisable = true;
+          } else {
+            btndisable = false;
+          }
         });
       },
       child: Padding(
@@ -1228,54 +1277,184 @@ class _CutiPageState extends State<CutiPage> {
     );
   }
 
-  Widget _buildAttendanceRow(
-      {required String dayDate,
-      required String statusText,
-      required String leave_date,
-      required String leave_datestart,
-      required String leave_dateend,
-      required String leave_qty,
-      required String leave_descr,
-      required String leave_nokontak,
-      required String leave_alamatkontak,
-      required String leave_type,
-      required String jatahCuti,
-      required String sisaCuti}) {
-    return Column(
-      children: <Widget>[
-        Divider(height: 5.0),
-        ListTile(
-          title: Text(
-            dayDate,
-            style: TextStyle(
-              fontSize: 14.0,
-              color: Colors.black,
+  Widget _buildAttendanceRow({
+    required String leave_id,
+    required String dayDate,
+    required String statusText,
+    required String leave_date,
+    required String leave_datestart,
+    required String leave_dateend,
+    required String leave_qty,
+    required String leave_descr,
+    required String leave_nokontak,
+    required String leave_alamatkontak,
+    required String leave_type,
+    required String jatahCuti,
+    required String sisaCuti,
+    required IconData iconTitle,
+    required Color iconColor,
+    // Parameter opsional untuk nilai default di dalam box approval
+    String managerRole = "",
+    String approvalStatus = "",
+  }) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+            color: Colors.grey.shade200, width: 1), // Garis tepi tipis
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10, left: 5, bottom: 10, right: 5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // BARIS 1: Info Utama Pengajuan Cuti & Tombol PDF
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon Status Kiri
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: CircleAvatar(
+                    radius: 11,
+                    backgroundColor: iconColor,
+                    child: Icon(iconTitle, size: 12, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 12.0),
+
+                // Teks Judul & Tanggal
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          fontSize: 13.0,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4.0),
+                      Text(
+                        dayDate,
+                        style: TextStyle(
+                            fontSize: 12.0, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tombol PDF Kanan dengan Logika Callback Anda
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.picture_as_pdf,
+                      color: Colors.red, size: 24),
+                  onPressed: () {
+                    print("leave_datestart : " + leave_datestart);
+                    print("jatahCuti : " + jatahCuti);
+                    widget.onIndexChanged(15);
+                    widget.leave_date(leave_date);
+                    widget.leave_datestart(leave_datestart);
+                    widget.leave_dateend(leave_dateend);
+                    widget.leave_qty(leave_qty);
+                    widget.leave_descr(leave_descr);
+                    widget.leave_nokontak(leave_nokontak);
+                    widget.leave_alamatkontak(leave_alamatkontak);
+                    widget.leave_type(leave_type);
+                    widget.jatahCuti(jatahCuti);
+                    widget.sisaCuti(sisaCuti);
+                  },
+                ),
+              ],
             ),
-          ),
-          subtitle: Text(
-            statusText,
-            style: TextStyle(fontSize: 12.0),
-          ),
-          trailing: IconButton(
-              icon: const Icon(Icons.picture_as_pdf),
-              onPressed: () {
-                print("leave_datestart : " + leave_datestart);
-                print("jatahCuti : " + jatahCuti);
-                widget.onIndexChanged(15);
-                widget.leave_date(leave_date);
-                widget.leave_datestart(leave_datestart);
-                widget.leave_dateend(leave_dateend);
-                widget.leave_qty(leave_qty);
-                widget.leave_descr(leave_descr);
-                widget.leave_nokontak(leave_nokontak);
-                widget.leave_alamatkontak(leave_alamatkontak);
-                widget.leave_type(leave_type);
-                widget.jatahCuti(jatahCuti);
-                widget.sisaCuti(sisaCuti);
-              }),
-          //onTap: () => _navigateToNote(context, items[position]),
+
+            const SizedBox(height: 12.0),
+
+            // BARIS 2: Filter & Looping Data Approval secara Otomatis
+            ...datacutiapproval
+                .where((item) =>
+                    item['leave_id'].toString() ==
+                    leave_id.toString()) // Filter data
+                .map((item) {
+              final dynamicName =
+                  item['employeeleaveapproval_name'] ?? 'TIDAK DIKETAHUI';
+              final dynamicRole =
+                  item['employeeleaveapproval_position'] ?? managerRole;
+              if (item['employeeleaveapproval_iscommited'] == 1) {
+                approvalStatus = "Disetujui";
+              } else {
+                approvalStatus = "Dalam Pengajuan";
+              }
+
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                margin: const EdgeInsets.only(bottom: 8.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA), // Latar abu-abu terang
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Info Nama & Jabatan Manajer
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dynamicName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.0,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4.0),
+                          Text(
+                            dynamicRole,
+                            style: TextStyle(
+                              fontSize: 10.0,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Badge Status "Disetujui"
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0, vertical: 4.0),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9), // Hijau sangat muda
+                        borderRadius: BorderRadius.circular(6.0),
+                      ),
+                      child: Text(
+                        approvalStatus,
+                        style: TextStyle(
+                          color: approvalStatus == "Disetujui"
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

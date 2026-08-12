@@ -16,13 +16,17 @@ import 'package:intl/intl.dart';
 
 class RequestAbsencePage extends StatefulWidget {
   final List<dynamic> HistoryData;
+  final List<dynamic> HistoryDataApproval;
   final ValueChanged<List<dynamic>> DataHistory;
+  final ValueChanged<List<dynamic>> DataApprovalHistory;
   final ValueChanged<int> onIndexChanged;
   final ValueChanged<String> imageurl;
   const RequestAbsencePage({
     super.key,
     required this.HistoryData,
+    required this.HistoryDataApproval,
     required this.DataHistory,
+    required this.DataApprovalHistory,
     required this.onIndexChanged,
     required this.imageurl,
   });
@@ -68,6 +72,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
   bool isLoading = false;
 
   List<dynamic> dataabsen = [];
+  List<dynamic> dataabsenapproval = [];
 
   String _selectedJenisIzinID = "Personal";
   String _selectedJenisIzinName = "Personal";
@@ -103,8 +108,10 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
     super.initState();
     if (widget.HistoryData.isEmpty) {
       _absen_history();
+      _absenapproval_history();
     } else {
       dataabsen = widget.HistoryData;
+      dataabsenapproval = widget.HistoryDataApproval;
     }
   }
 
@@ -134,10 +141,37 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
       setState(() {
         isLoading = false;
       });
+      print("_absen_history : ");
       print(hasils);
       if (hasils.length > 0) {
         setState(() {
           dataabsen = hasils;
+        });
+      }
+    });
+  }
+
+  void _absenapproval_history() {
+    setState(() {
+      isLoading = true;
+    });
+    fh
+        .requestabsen_history(
+            UserSession.database_name,
+            UserSession.employee_personalid,
+            UserSession.apikey,
+            UserSession.token,
+            "requestabsen/showrequestabsenapproval",
+            UserSession.url_api)
+        .then((hasils) async {
+      setState(() {
+        isLoading = false;
+      });
+      print("_absenapproval_history : ");
+      print(hasils);
+      if (hasils.length > 0) {
+        setState(() {
+          dataabsenapproval = hasils;
         });
       }
     });
@@ -723,7 +757,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                   //       // Stepper 1: Atasan Langsung (Menunggu Persetujuan - Orange)
                   //       _buildIzinTimelineTile(
                   //         title: 'Atasan Langsung',
-                  //         subtitle: 'Menunggu persetujuan',
+                  //         subtitle: 'Burhanuddin',
                   //         statusIcon: Icons.access_time_filled_rounded,
                   //         statusColor: AppColors.accent,
                   //       ),
@@ -731,7 +765,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                   //       // Stepper 2: Human Resources (Belum Mulai - Abu-abu)
                   //       _buildIzinTimelineTile(
                   //         title: 'Human Resources',
-                  //         subtitle: 'Menunggu tahap sebelumnya',
+                  //         subtitle: 'Human Resources',
                   //         statusIcon: Icons.access_time_filled_rounded,
                   //         statusColor: const Color(0xFF94A3B8),
                   //         isLast: true,
@@ -739,7 +773,7 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                   //     ],
                   //   ),
                   // ),
-                  const SizedBox(height: 24),
+                  // const SizedBox(height: 24),
                   // ==================== TOMBOL UTAMA: AJUKAN IZIN ====================
                   SizedBox(
                     width: double.infinity,
@@ -840,7 +874,9 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
                                   item['requestabsence_approved'] ?? 0;
 
                               if (isapproved == 1) {
-                                statusText = statusText + "   (Approved)";
+                                statusText = statusText + "   (Disetujui)";
+                              } else {
+                                statusText = statusText + "   (Pengajuan)";
                               }
 
                               print("rawDate2 $rawDateStart");
@@ -871,13 +907,22 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
 
                               // Tampilkan Baris Widget per Item Data
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 0),
+                                padding: const EdgeInsets.only(
+                                    bottom: 0, left: 0, right: 0),
                                 child: _buildAttendanceRow(
-                                    dayDate: formattedDateStart +
-                                        " - " +
-                                        formattedDateEnd,
-                                    statusText: statusText,
-                                    image_url: image_url),
+                                  id: item['requestabsence_id'] ?? '',
+                                  dayDate: formattedDateStart +
+                                      " - " +
+                                      formattedDateEnd,
+                                  statusText: statusText,
+                                  image_url: image_url,
+                                  iconTitle: isapproved == 1
+                                      ? Icons.check_circle
+                                      : Icons.history_toggle_off_rounded,
+                                  iconColor: isapproved == 1
+                                      ? Colors.green
+                                      : AppColors.accent,
+                                ),
                               );
                             }).toList();
                           }(),
@@ -1407,35 +1452,174 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
   }
 
   Widget _buildAttendanceRow({
+    required String id,
     required String dayDate,
     required String statusText,
     required String image_url,
+    required IconData iconTitle,
+    required Color iconColor,
+    // Tetap sediakan default parameter jika data array kosong
+    String managerRole = "",
+    String approvalStatus = "",
   }) {
-    return Column(
-      children: <Widget>[
-        Divider(height: 5.0),
-        ListTile(
-          title: Text(
-            dayDate,
-            style: TextStyle(
-              fontSize: 14.0,
-              color: Colors.black,
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(
+            top: 10,
+            left: 5,
+            bottom: 10,
+            right: 10), // Menambahkan padding bawah & kanan agar seimbang
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // BARIS 1: Info Utama Absensi & Tombol Gambar
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon Status Kiri
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: CircleAvatar(
+                    radius: 11,
+                    backgroundColor: iconColor,
+                    child: Icon(iconTitle, size: 12, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 12.0),
+
+                // Teks Judul & Tanggal
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          fontSize: 12.0,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4.0),
+                      Text(
+                        dayDate,
+                        style: TextStyle(
+                            fontSize: 12.0, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tombol Gambar Kanan
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.image, color: Colors.black, size: 22),
+                  onPressed: () {
+                    print(UserSession.url_api_image + image_url);
+                    widget.onIndexChanged(13);
+                    widget.imageurl(UserSession.url_api_image + image_url);
+                    widget.DataHistory(dataabsen);
+                    widget.DataApprovalHistory(dataabsenapproval);
+                  },
+                ),
+              ],
             ),
-          ),
-          subtitle: Text(
-            statusText,
-            style: TextStyle(fontSize: 12.0),
-          ),
-          trailing: IconButton(
-              icon: const Icon(Icons.image),
-              onPressed: () {
-                print(UserSession.url_api_image + image_url);
-                widget.onIndexChanged(13);
-                widget.imageurl(UserSession.url_api_image + image_url);
-                widget.DataHistory(dataabsen);
-              }),
+
+            const SizedBox(height: 12.0),
+
+            // BARIS 2: Melakukan perulangan data approval secara dinamis
+            // Menggunakan operator spread (...) untuk memasukkan list widget ke dalam children
+            ...dataabsenapproval
+                .where((item) =>
+                    item['requestabsence_id'].toString() ==
+                    id.toString()) // Baris Filter Data
+                .map((item) {
+              // Ambil nama langsung ke variabel lokal baru di dalam map
+              final dynamicName =
+                  item['requestabsenceapproval_name'] ?? 'TIDAK DIKETAHUI';
+              final dynamicRole =
+                  item['requestabsenceapproval_position'] ?? managerRole;
+              // final dynamicStatus =
+              //     item['requestabsenceapproval_iscommited'] ?? approvalStatus;
+              if (item['requestabsenceapproval_iscommited'] == 1) {
+                approvalStatus = "Disetujui";
+              } else {
+                approvalStatus = "Dalam Pengajuan";
+              }
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                margin: const EdgeInsets.only(
+                    bottom:
+                        8.0), // Jarak antar kotak approval jika manajer lebih dari satu
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Info Nama & Jabatan Manajer
+                    Expanded(
+                      // Ditambahkan Expanded agar teks nama yang panjang tidak meluap (overflow)
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dynamicName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.0,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4.0),
+                          Text(
+                            dynamicRole,
+                            style: TextStyle(
+                              fontSize: 10.0,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Badge Status
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0, vertical: 4.0),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(6.0),
+                      ),
+                      child: Text(
+                        approvalStatus,
+                        style: TextStyle(
+                          color: approvalStatus == "Disetujui"
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
         ),
-      ],
+      ),
     );
   }
 
