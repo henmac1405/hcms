@@ -2279,7 +2279,7 @@ class HelperFunction {
         print('json');
         print(json['data']);
         data = json['data'];
-        strcode = "sukses";
+        strcode = "sukses_" + json['message'];
       } else {
         strcode = json['message'] ?? "Gagal mengunggah data";
         db.saveError(Error(

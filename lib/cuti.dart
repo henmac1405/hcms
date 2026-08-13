@@ -415,7 +415,9 @@ class _CutiPageState extends State<CutiPage> {
         _tanggalawalController.text = _getFormattedTodayStatic();
         _tanggalakhirController.text = _getFormattedTodayStatic();
         _subjekController.text = "";
+        master_leave_balance();
         cuti_history();
+        cutiapproval_history();
         _showDialog(hasils.replaceAll("sukses_", ""));
       } else {
         setState(() {

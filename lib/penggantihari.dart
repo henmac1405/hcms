@@ -363,7 +363,7 @@ class _PenggantiHariPageState extends State<PenggantiHariPage> {
           _tanggalakhirController.text = _getFormattedTodayStatic();
           _subjekController.text = "";
         });
-        _showDialog("Data Berhasil Disimpan");
+        _showDialog(hasils.replaceAll("sukses_", ""));
         //   }
         // });
       } else {

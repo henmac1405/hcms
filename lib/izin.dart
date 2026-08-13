@@ -285,7 +285,7 @@ class _IzinPageState extends State<IzinPage> {
       setState(() {
         isLoading = false;
       });
-      if (hasils == "sukses") {
+      if (hasils.substring(0, 6) == "sukses") {
         _absen_history();
         // fh
         //     .uploadimageabsen(
@@ -300,7 +300,7 @@ class _IzinPageState extends State<IzinPage> {
           _tanggalakhirController.text = _getFormattedTodayStatic();
           _subjekController.text = "";
         });
-        _showDialog("Data Berhasil Disimpan");
+        _showDialog(hasils.replaceAll("sukses_", ""));
         //   }
         // });
       } else {
