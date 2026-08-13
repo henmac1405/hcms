@@ -267,7 +267,7 @@ class _FaceDetectorCameraScreenState extends State<FaceDetectorCameraScreen> {
             "absen/insertnew",
             UserSession.url_api)
         .then((hasils) async {
-      if (hasils == "sukses") {
+      if (hasils.substring(0, 6) == "sukses") {
         // _uploaddioNew(watermarkedFile);
         // fh
         //     .uploadimageabsen(
