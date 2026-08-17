@@ -527,7 +527,13 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
                       return uniqueHistory.take(5).map((item) {
                         // Format Tanggal ke "dd MMM yyyy"
                         String rawDate = item['absence_date'] ?? '';
+                        String rawDateOut = item['absence_dateout'] ?? '';
+                        String dateabsen = item['dateabsen'] ?? '';
                         String formattedDate = '-';
+                        String formattedDateOut = '-';
+                        print("rawDate : ${rawDate}");
+                        print("rawDateOut : ${rawDateOut}");
+                        print("dateabsen : ${dateabsen}");
                         if (rawDate.isNotEmpty) {
                           try {
                             DateTime parsedDate = DateTime.parse(rawDate);
@@ -535,6 +541,16 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
                                 .format(parsedDate);
                           } catch (e) {
                             formattedDate = rawDate;
+                          }
+                        }
+                        if (rawDateOut.isNotEmpty) {
+                          try {
+                            DateTime parsedDate = DateTime.parse(rawDateOut);
+                            formattedDateOut =
+                                DateFormat('dd MMM yyyy', 'id_ID')
+                                    .format(parsedDate);
+                          } catch (e) {
+                            formattedDateOut = rawDateOut;
                           }
                         }
 
@@ -557,6 +573,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
                           child: _buildAttendanceHistoryCard(
                             context: context,
                             dayDate: formattedDate,
+                            dayDateOut: formattedDateOut,
                             statusLabel: statusLabel,
                             statusColor: statusColor,
                             statusBgColor: statusBgColor,
@@ -588,6 +605,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
   Widget _buildAttendanceHistoryCard({
     required BuildContext context, // Tambahkan parameter context di sini
     required String dayDate,
+    required String dayDateOut,
     required String statusLabel,
     required Color statusColor,
     required Color statusBgColor,
@@ -698,7 +716,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
                     print("imageurl_out : $imageurl_out");
                     widget.onIndexChanged(12);
                     widget.titleLabel('Keluar');
-                    widget.dayDate(dayDate);
+                    widget.dayDate(dayDateOut);
                     widget.timeLabel(checkOutTime);
                     widget.statusLabel(statusLabel);
                     widget.statusColor(statusColor);

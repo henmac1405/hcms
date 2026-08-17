@@ -1039,32 +1039,32 @@ class _HomeContentSectionState extends State<HomeContentSection> {
                               height: 6), // Menyeimbangkan jarak sebelum tombol
 
                           // TOMBOL OUTLINE: AJUKAN KOREKSI ABSENSI
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                // widget.onIndexChanged(10);
-                              },
-                              icon: const Icon(Icons.edit,
-                                  color: Color(0xFF001F82), size: 18),
-                              label: const Text(
-                                'Ajukan Koreksi Absensi',
-                                style: TextStyle(
-                                  color: Color(0xFF001F82),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Color(0xFF001F82), width: 2),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
+                          // SizedBox(
+                          //   width: double.infinity,
+                          //   height: 52,
+                          //   child: OutlinedButton.icon(
+                          //     onPressed: () {
+                          //       // widget.onIndexChanged(10);
+                          //     },
+                          //     icon: const Icon(Icons.edit,
+                          //         color: Color(0xFF001F82), size: 18),
+                          //     label: const Text(
+                          //       'Ajukan Koreksi Absensi',
+                          //       style: TextStyle(
+                          //         color: Color(0xFF001F82),
+                          //         fontSize: 16,
+                          //         fontWeight: FontWeight.bold,
+                          //       ),
+                          //     ),
+                          //     style: OutlinedButton.styleFrom(
+                          //       side: const BorderSide(
+                          //           color: Color(0xFF001F82), width: 2),
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(16),
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),

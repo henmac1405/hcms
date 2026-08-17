@@ -83,6 +83,7 @@ class _RequestPHPageState extends State<RequestPHPage> {
   String selectedDate = '';
   String tgldiajukan = "";
   String tglkadaluarsa = "";
+  DateTime now = DateTime.now();
 
   // Data list tanggal sesuai gambar referensi
 
@@ -716,6 +717,22 @@ class _RequestPHPageState extends State<RequestPHPage> {
                                           date_to =
                                               DateFormat('yyyy-MM-dd', 'id')
                                                   .format(calculatedExpiry);
+                                          print(
+                                              "parsedDateNew : ${parsedDateNew!}");
+                                          print(
+                                              "tglkadaluarsa : ${calculatedExpiry}");
+                                          // PERBAIKAN: Menggunakan .isAfter() dan DateTime.now()
+                                          if (DateTime.now()
+                                              .isAfter(calculatedExpiry)) {
+                                            selectedDate = "";
+
+                                            _showDialog(
+                                                "Tanggal Pengajuan sudah kadaluarsa : ${tglkadaluarsa}");
+                                            tgldiajukan = "";
+                                            tglkadaluarsa = "";
+                                            date_from = "";
+                                            date_to = "";
+                                          }
                                         } else {
                                           tgldiajukan = dateText;
                                           tglkadaluarsa = dateText;
@@ -1004,7 +1021,7 @@ class _RequestPHPageState extends State<RequestPHPage> {
                         // if (_subjekController.text == "") {
                         //   _showDialog("Subjek Pengajuan Belum Diisi");
                         if (selectedDate == "") {
-                          _showDialog("Tanggal Absen belum dipilih");
+                          _showDialog("Tanggal Yang diajukan belum dipilih");
                         } else {
                           // } else {
                           _showDialogReq(

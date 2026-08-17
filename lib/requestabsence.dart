@@ -1537,86 +1537,87 @@ class _RequestAbsencePageState extends State<RequestAbsencePage> {
 
             // BARIS 2: Melakukan perulangan data approval secara dinamis
             // Menggunakan operator spread (...) untuk memasukkan list widget ke dalam children
-            ...dataabsenapproval
-                .where((item) =>
-                    item['requestabsence_id'].toString() ==
-                    id.toString()) // Baris Filter Data
-                .map((item) {
-              // Ambil nama langsung ke variabel lokal baru di dalam map
-              final dynamicName =
-                  item['requestabsenceapproval_name'] ?? 'TIDAK DIKETAHUI';
-              final dynamicRole =
-                  item['requestabsenceapproval_position'] ?? managerRole;
-              // final dynamicStatus =
-              //     item['requestabsenceapproval_iscommited'] ?? approvalStatus;
-              if (item['requestabsenceapproval_iscommited'] == 1) {
-                approvalStatus = "Disetujui";
-              } else {
-                approvalStatus = "Dalam Pengajuan";
-              }
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12.0),
-                margin: const EdgeInsets.only(
-                    bottom:
-                        8.0), // Jarak antar kotak approval jika manajer lebih dari satu
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Info Nama & Jabatan Manajer
-                    Expanded(
-                      // Ditambahkan Expanded agar teks nama yang panjang tidak meluap (overflow)
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            dynamicName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.0,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 4.0),
-                          Text(
-                            dynamicRole,
-                            style: TextStyle(
-                              fontSize: 10.0,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
 
-                    // Badge Status
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10.0, vertical: 4.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
-                        borderRadius: BorderRadius.circular(6.0),
-                      ),
-                      child: Text(
-                        approvalStatus,
-                        style: TextStyle(
-                          color: approvalStatus == "Disetujui"
-                              ? Colors.green
-                              : Colors.orange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11.0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+            // ...dataabsenapproval
+            //     .where((item) =>
+            //         item['requestabsence_id'].toString() ==
+            //         id.toString()) // Baris Filter Data
+            //     .map((item) {
+            //   // Ambil nama langsung ke variabel lokal baru di dalam map
+            //   final dynamicName =
+            //       item['requestabsenceapproval_name'] ?? 'TIDAK DIKETAHUI';
+            //   final dynamicRole =
+            //       item['requestabsenceapproval_position'] ?? managerRole;
+            //   // final dynamicStatus =
+            //   //     item['requestabsenceapproval_iscommited'] ?? approvalStatus;
+            //   if (item['requestabsenceapproval_iscommited'] == 1) {
+            //     approvalStatus = "Disetujui";
+            //   } else {
+            //     approvalStatus = "Dalam Pengajuan";
+            //   }
+            //   return Container(
+            //     width: double.infinity,
+            //     padding: const EdgeInsets.all(12.0),
+            //     margin: const EdgeInsets.only(
+            //         bottom:
+            //             8.0), // Jarak antar kotak approval jika manajer lebih dari satu
+            //     decoration: BoxDecoration(
+            //       color: const Color(0xFFF8F9FA),
+            //       borderRadius: BorderRadius.circular(8.0),
+            //     ),
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //       children: [
+            //         // Info Nama & Jabatan Manajer
+            //         Expanded(
+            //           // Ditambahkan Expanded agar teks nama yang panjang tidak meluap (overflow)
+            //           child: Column(
+            //             crossAxisAlignment: CrossAxisAlignment.start,
+            //             children: [
+            //               Text(
+            //                 dynamicName,
+            //                 style: const TextStyle(
+            //                   fontWeight: FontWeight.bold,
+            //                   fontSize: 12.0,
+            //                   color: Colors.black87,
+            //                 ),
+            //               ),
+            //               const SizedBox(height: 4.0),
+            //               Text(
+            //                 dynamicRole,
+            //                 style: TextStyle(
+            //                   fontSize: 10.0,
+            //                   color: Colors.grey.shade600,
+            //                   fontWeight: FontWeight.w500,
+            //                 ),
+            //               ),
+            //             ],
+            //           ),
+            //         ),
+
+            //         // Badge Status
+            //         Container(
+            //           padding: const EdgeInsets.symmetric(
+            //               horizontal: 10.0, vertical: 4.0),
+            //           decoration: BoxDecoration(
+            //             color: const Color(0xFFE8F5E9),
+            //             borderRadius: BorderRadius.circular(6.0),
+            //           ),
+            //           child: Text(
+            //             approvalStatus,
+            //             style: TextStyle(
+            //               color: approvalStatus == "Disetujui"
+            //                   ? Colors.green
+            //                   : Colors.orange,
+            //               fontWeight: FontWeight.bold,
+            //               fontSize: 11.0,
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   );
+            // }).toList(),
           ],
         ),
       ),
